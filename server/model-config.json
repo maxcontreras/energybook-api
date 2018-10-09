@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "sources": [
+      "loopback/common/models",
+      "loopback/server/models",
+      "../common/models",
+      "./models"
+    ],
+    "mixins": [
+      "loopback/common/mixins",
+      "loopback/server/mixins",
+      "../common/mixins",
+      "./mixins"
+    ]
+  },
+  "User": {
+    "dataSource": "db",
+    "public": false
+  },
+  "AccessToken": {
+    "dataSource": "mongodb",
+    "public": false
+  },
+  "ACL": {
+    "dataSource": "db",
+    "public": false
+  },
+  "RoleMapping": {
+    "dataSource": "db",
+    "public": false,
+    "options": {
+      "strictObjectIDCoercion": true
+    }
+  },
+  "Role": {
+    "dataSource": "db",
+    "public": false
+  },
+  "Company": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "eUser": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "Meter": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "Log": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "DesignatedMeter": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "Payment": {
+    "dataSource": "mongodb",
+    "public": true
+  },
+  "CompanyType": {
+    "dataSource": "mongodb",
+    "public": true
+  }
+}

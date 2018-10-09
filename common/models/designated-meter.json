@@ -1,0 +1,39 @@
+{
+  "name": "DesignatedMeter",
+  "plural": "DesignatedMeters",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "device_name": {
+      "type": "string",
+      "required": true
+    },
+    "active": {
+      "type": "number",
+      "required": true,
+      "default": 1
+    },
+    "created_at": {
+      "type": "date",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {
+    "company": {
+      "type": "belongsTo",
+      "model": "Company",
+      "foreignKey": "company_id"
+    },
+    "meter": {
+      "type": "belongsTo",
+      "model": "Meter",
+      "foreignKey": "meter_id"
+    }
+  },
+  "acls": [],
+  "methods": {}
+}

@@ -1,0 +1,241 @@
+'use strict';
+
+const Converter = require('xml-js');
+const Cons = require('../constants.json');
+const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const xhr = new XMLHttpRequest();
+const Constants = require('./../../server/constants.json');
+const moment = require('moment-timezone');
+const async = require('async');
+
+
+const API_PREFIX = "/services/user/";
+const DEFAULT_HOURS = 24;
+const DEFAULT_DAYS = 1;
+const CHARGE_FACTOR = Constants.CFE.values.charge_factor;
+
+moment.tz.setDefault("America/Mexico_City");
+
+const OPTIONS_XML2JS  = {
+    compact: true,
+    spaces: 4
+}
+const OPTIONS_JS2XML = {
+    indentAttributes: true,
+    spaces: 2,
+    compact: true,
+    fullTagEmptyElement:false
+};
+
+var performEDSrequest = function performEDSrequest(service, next){
+    // Example URL: /services/user/devices.xml
+    xhr.open('GET', service, false);
+    xhr.send();
+    xhr.onreadystatechange = function(){
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var newObj = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+            next(null, newObj);
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            var newObj = {};
+            next(true, null);
+        }
+    };
+};
+
+var getDeviceInfo = function getDeviceInfo(device, next){
+    let serviceToCall = "deviceInfo.xml" + "?id=" + device.device_name;
+    performEDSrequest(serviceToCall, function(err, response){
+        let deviceInfo = response.devices.device;
+        next(err, deviceInfo);
+    });
+};
+
+var getAllDeviceVariables = function getAllDeviceVariables(device, next){
+    let serviceToCall = "varInfo.xml" + "?id=" + device.device_name;
+    performEDSrequest(serviceToCall, function(err, response){
+        let deviceVars = response.varInfo;
+        next(err, deviceVars);
+    });
+};
+
+var readDemand = function readDemand(meter, next){
+    var dates = dateFilterSetup(Constants.Meters.filters.monthAVG);
+    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+        +dates.end+ "?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
+
+    console.log('serviceToCall Month:', serviceToCall);
+
+    xhr.open('GET', serviceToCall, true);
+    xhr.send();
+    xhr.onreadystatechange = function(){
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+            let demand = ( parseInt(reading.recordGroup.record.field.value._text) / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
+            console.log('demand hereeee:', demand);
+            if(demand){
+                demand = demand.toFixed(2);
+                next(null, demand);
+            }
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            next(true, null);
+        }
+    };
+};
+
+var readEPimpHistory = function readEPimpHistory(meter, next){
+    var dates = dateFilterSetup(Constants.Meters.filters.month);
+    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+        +dates.end+ "?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
+
+    console.log('serviceToCall Month:', serviceToCall);
+
+    xhr.open('GET', serviceToCall, true);
+    xhr.send();
+    xhr.onreadystatechange = function(){
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+            let epimpHistory = [];
+            Object.keys(reading.recordGroup.record).forEach(function(key) {
+                let read = {};
+                read.date = reading.recordGroup.record[key].dateTime._text;
+                read.value = reading.recordGroup.record[key].field.value._text;
+                epimpHistory.push(read);
+            });
+            if(epimpHistory){
+                next(null, epimpHistory);
+            }
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            next(true, null);
+        }
+    };
+};
+
+/*
+ * Example URL: http://ecg.dontexist.com/services/user/records.xml?begin=12072018?end=15082018?var=MEDIDOR%201.DP
+ */
+var panelReadings = function panelReadings(filter, meter, next){
+    let dates = dateFilterSetup(Constants.Meters.filters.today);
+    let response = [];
+    let epimpService = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+        +dates.end+ "?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
+    let dpService = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+        +dates.end+ "?var=" +meter.device_name+ ".DP?period=" +dates.period;
+
+    async.waterfall([
+        function epimpRead(nxt){
+            // performEDSrequest(epimpService, function(err, epimpReads){
+            //     console.log('resssss');
+            //     if(err) nxt(err, null);
+            //     else {
+            //         console.log('epimp: ', epimpReads);
+            //         nxt(null, true);
+            //     }
+            // });
+            xhr.open('GET', epimpService, false);
+            xhr.send();
+            console.log(epimpService);
+            xhr.onreadystatechange = function(){
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log('over here');
+                    var newObj = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                    next(null, newObj);
+                } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                    var newObj = {};
+                    next(true, null);
+                }
+            };
+        },
+        function dpRead(pvt, nxt){
+            console.log('here');
+            performEDSrequest(dpService, function(err, dpReads){
+                if(err) nxt(err, null);
+                else {
+                    console.log('dp: ', dpReads);
+                    nxt(null, true);
+                }
+            });
+        }
+    ], function(err, response){
+        console.log('response:', response);
+        if(err) next(err, null);
+        else {
+
+        }
+    });
+};
+
+var dateFilterSetup = function dateFilterSetup(filter){
+    // TODO: Investigar que putas con la agrupacion por periodo y agregarlo en obj date.
+    let date = [];
+    switch (filter) {
+        case Constants.Meters.filters.today:
+            date.begin = moment().format('DDMMYYYY');
+            date.end = moment().format('DDMMYYYY');
+            date.period = 3600;
+            return date;
+            break;
+        case Constants.Meters.filters.yesterday:
+            date.begin = moment().subtract(1, 'days').format('DDMMYYYY');
+            date.end = moment().subtract(1, 'days').format('DDMMYYYY');
+            date.period = 3600;
+            return date;
+            break;
+        case Constants.Meters.filters.week:
+            date.begin = moment().startOf('week').format('DDMMYYYY');
+            date.end = moment().endOf('week').format('DDMMYYYY');
+            date.period = 86400;
+            return date;
+            break;
+        case Constants.Meters.filters.month:
+            date.begin = moment().startOf('month').format('DDMMYYYY');
+            date.end = moment().endOf('week').format('DDMMYYYY');
+            date.period = 86400;
+            return date;
+            break;
+        case Constants.Meters.filters.year:
+            date.begin = moment().startOf('year').format('DDMMYYYY');
+            date.end = moment().endOf('year').format('DDMMYYYY');
+            date.period = 86400;
+            return date;
+            break;
+        case Constants.Meters.filters.custom:
+            date.begin = moment().format('DDMMYYYY');
+            date.end = moment().format('DDMMYYYY');
+            date.period = 900;
+            return date;
+            break;
+        case Constants.Meters.filters.latest:
+            date.begin = moment().format('DDMMYYYY');
+            date.end = moment().format('DDMMYYYY');
+            date.period = 5;
+            return date;
+            break;
+        case Constants.Meters.filters.dayAVG:
+            date.begin = moment().format('DDMMYYYY');
+            date.end = moment().format('DDMMYYYY');
+            date.period = 86400;
+            date.hour = moment().hour();
+            return date;
+            break;
+        case Constants.Meters.filters.monthAVG:
+            date.begin = moment().startOf('month').format('DDMMYYYY');
+            date.end = moment().endOf('month').format('DDMMYYYY');
+            date.period = 2592000;
+            date.day = moment().date();
+            return date;
+            break;
+        default:
+            date.begin = moment().format('DDMMYYYY');
+            date.end = moment().format('DDMMYYYY');
+            date.period = 900;
+            return date;
+    }
+}
+
+module.exports.performEDSrequest = performEDSrequest;
+module.exports.getDeviceInfo = getDeviceInfo;
+module.exports.getAllDeviceVariables = getAllDeviceVariables;
+module.exports.panelReadings = panelReadings;
+module.exports.readDemand = readDemand;
+module.exports.readEPimpHistory = readEPimpHistory;
+module.exports.dateFilterSetup = dateFilterSetup;

@@ -1,0 +1,63 @@
+{
+    "Companies":{
+        "status": {
+            "Eliminada": 0,
+            "Activa": 1,
+            "Bloqueada": 2,
+            "Nuevo": 3
+        }
+    },
+    "Eusers": {
+        "roles": {
+            "Admin": 1,
+            "User": 2,
+            "Manager": 3,
+            "Accounting": 4
+        },
+        "status": {
+            "Nuevo": 0,
+            "Pendiente": 1,
+            "Activo": 2,
+            "Bloqueado": 3,
+            "0": "Nuevo",
+            "1": "Pendiente",
+            "2": "Activo",
+            "3": "Bloqueado"
+        }
+    },
+    "Meters": {
+        "active": {
+            "Activo": 1,
+            "Inactivo": 0
+        },
+        "designated": {
+            "active": {
+                "Activo": 1,
+                "Inactivo": 0
+            }
+        },
+        "filters": {
+            "today": 0,
+            "yesterday": 1,
+            "week": 2,
+            "month": 3,
+            "year": 4,
+            "custom": 5,
+            "latest": 6,
+            "dayAVG": 7,
+            "monthAVG": 8
+        }
+    },
+    "CFE": {
+        "values": {
+            "charge_factor": 0.57,
+            "distribution_price": 148.5,
+            "capacity_price": 144.71,
+            "consumption_price": {
+                "base": 1.1030,
+                "middle": 2.0062,
+                "peak": 2.2633
+            }
+        }
+    }
+}
