@@ -1,4 +1,4 @@
-# Energybbook API #
+# Energybook API #
 
 ## Getting Started ##
 Hey there! This is Energybook API code. Before you start coding follow this instructions to successfully set your environment.
@@ -16,7 +16,6 @@ We highly recommend you to take a quick look to these libraries that we're using
 First and foremost, clone this repository with a
 
 ```
-#!javascript
 $ git clone https://github.com/maxcontreras/energybook-api.git
 ```
 
@@ -30,21 +29,18 @@ Open your system terminal or cmd.
 Run mongo with:
 
 ```
-#!javascript
 $ mongod
 ```
 
 Run the API code with:
 
 ```
-#!javascript
 $ forever -w server/server.js
 ```
 
 Look for the following output in your logs:
 
 ```
-#!javascript
 Web server listening at: http://0.0.0.0:3000
 Browse your REST API at http://0.0.0.0:3000/explorer
 ```
