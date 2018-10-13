@@ -46,6 +46,11 @@
             "latest": 6,
             "dayAVG": 7,
             "monthAVG": 8
+        },
+        "common_names":{
+            "summatory_device": "R$CAL_Total",
+            "summatory_dp": "DPT",
+            "summatory_epimp": "EPIMPT"
         }
     },
     "CFE": {

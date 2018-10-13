@@ -127,6 +127,38 @@ module.exports = function(Meter) {
         returns: { arg: 'meters', type: 'object' }
     });
 
+    Meter.getAssigned = function getAssigned(id, cb) {
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        DesignatedMeter.find({
+            include: [
+                {
+                    relation: 'company'
+                },
+                {
+                    relation: 'meter'
+                }
+            ],
+            where: {
+                and: [
+                    { meter_id: id },
+                    { active: 1 }
+                ]
+            },
+        }, function(err, meter){
+            if(err) cb({status: 400, message: "Error al traer medidor asignado"}, null);
+            if(meter){
+                cb(null, meter);
+            }
+        });
+    };
+
+    Meter.remoteMethod('getAssigned', {
+        accepts: [
+            { arg: 'id', type: 'string' }
+        ],
+        returns: { arg: 'meters', type: 'object' }
+    });
+
     Meter.getDeviceInfo = function getDeviceInfo(id, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
@@ -239,7 +271,7 @@ module.exports = function(Meter) {
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +meter.device_name+ ".DP?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
-                    xhr.open('GET', service, true);
+                    xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -310,6 +342,58 @@ module.exports = function(Meter) {
                 { arg: 'id', type: 'string' }
             ],
             returns: { arg: 'latestValues', type: 'object' }
+        }
+    );
+
+    Meter.connectedDevices = function connectedDevices(id, cb){
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    }
+                ],
+                where: {
+                    and: [
+                        { id: id },
+                        { active: 1 }
+                    ]
+                },
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if(meter){
+                    let service = meter.hostname+ API_PREFIX +"devices.xml";
+                    xhr.open('GET', service, false);
+                    xhr.onreadystatechange = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            var connectedDevices = [];
+                            Object.keys(reading.devices.id).forEach(function(key) {
+                                connectedDevices.push(reading.devices.id[key]._text);
+                            });
+                            cb(null, connectedDevices);
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    };
+                    xhr.send();
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'connectedDevices', {
+            accepts: [
+                { arg: 'id', type: 'string' }
+            ],
+            returns: { arg: 'devices', type: 'object', root: true }
         }
     );
 };

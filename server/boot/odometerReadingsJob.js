@@ -31,10 +31,10 @@ const OPTIONS_JS2XML = {
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-var odometerReadings = new CronJob('*/3 * * * *', function () {
+var odometerReadings = new CronJob('*/1 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
-            let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.device_name+ ".DP";
+            let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
             // console.log('serviceToCall:', serviceToCall);
 
             xhr.open('GET', serviceToCall, false);
@@ -44,7 +44,7 @@ var odometerReadings = new CronJob('*/3 * * * *', function () {
                     let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
                     if(dp){
                         dp = dp.toFixed(2);
-                        console.log('DP: '+ meter.device_name + ': value => ' + dp);
+                        // console.log('DP: '+ meter.device_name + ': value => ' + dp);
                         meter.latestValues.lastUpdated = new Date();
                         if(!meter.latestValues.dp){
                             meter.latestValues.dp = {};

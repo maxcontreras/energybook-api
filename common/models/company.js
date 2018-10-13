@@ -49,13 +49,13 @@ module.exports = function(Company) {
 
     Company.designateMeter = function designateMeter(data, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        let modelObject = data.data;
-
+        let modelObject = data;
         if(!modelObject || !modelObject.company_id || !modelObject.meter_id){
             cb({status: 400, message: "Parametros faltantes"}, null);
         } else {
             DesignatedMeter.create({
                 device_name: modelObject.device_name,
+                summatory_device: Constants.Meters.common_names.summatory_device,
                 company_id: modelObject.company_id,
                 hostname: modelObject.hostname,
                 meter_id: modelObject.meter_id,
@@ -63,7 +63,10 @@ module.exports = function(Company) {
                 active: 1,
                 created_at: new Date()
             }, function (err, designatedMeter){
-                cb(null, 'Medidor '+ designatedMeter.meter_id +' asignado correctamente');
+                if(err) cb({status: 400, message: "Error al asignar medidor"}, null);
+                else {
+                    cb(null, 'Medidor '+ designatedMeter.meter_id +' asignado correctamente');
+                }
             });
         }
     };
