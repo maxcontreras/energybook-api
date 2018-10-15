@@ -35,7 +35,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
         async.each(meters, function(meter, next){
             var dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                +dates.end+ "?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
+                +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
 
             // console.log('serviceToCall:', serviceToCall);
             xhr.open('GET', serviceToCall, false);

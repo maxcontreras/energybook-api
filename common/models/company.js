@@ -56,11 +56,13 @@ module.exports = function(Company) {
             DesignatedMeter.create({
                 device_name: modelObject.device_name,
                 summatory_device: Constants.Meters.common_names.summatory_device,
-                company_id: modelObject.company_id,
                 hostname: modelObject.hostname,
-                meter_id: modelObject.meter_id,
+                max_value: parseInt(modelObject.max_value),
+                min_value: parseInt(modelObject.min_value),
                 latestValues: {},
                 active: 1,
+                meter_id: modelObject.meter_id,
+                company_id: modelObject.company_id,
                 created_at: new Date()
             }, function (err, designatedMeter){
                 if(err) cb({status: 400, message: "Error al asignar medidor"}, null);

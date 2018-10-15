@@ -396,4 +396,42 @@ module.exports = function(Meter) {
             returns: { arg: 'devices', type: 'object', root: true }
         }
     );
+
+    Meter.consumptionMaxMinValues = function consumptionMaxMinValues(id, cb){
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al intentar consultar medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                },
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if(meter){
+                    cb(null, {min: meter.min_value, max: meter.max_value});
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'consumptionMaxMinValues', {
+            accepts: [
+                { arg: 'id', type: 'string' }
+            ],
+            returns: { arg: 'meter', type: 'object', root: true }
+        }
+    );
 };

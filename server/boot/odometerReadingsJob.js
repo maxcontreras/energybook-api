@@ -31,7 +31,7 @@ const OPTIONS_JS2XML = {
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-var odometerReadings = new CronJob('*/1 * * * *', function () {
+var odometerReadings = new CronJob('*/3 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
             let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
