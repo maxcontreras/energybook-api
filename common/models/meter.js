@@ -271,7 +271,6 @@ module.exports = function(Meter) {
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
-                    console.log('service', service);
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
