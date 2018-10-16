@@ -241,7 +241,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getReadingsByFilter = function getReadingsByFilter(id, filter, cb){
+    Meter.getReadingsByFilter = function getReadingsByFilter(id, device, filter, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -270,23 +270,28 @@ module.exports = function(Meter) {
                     var dates = EDS.dateFilterSetup(filter);
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                                    +dates.end+ "?var=" +meter.device_name+ ".DP?var=" +meter.device_name+ ".EPimp?period=" +dates.period;
+                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    console.log('service', service);
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             let read = {};
-                            Object.keys(reading.recordGroup.record).forEach(function(key) {
-                                read.dp = {};
-                                read.epimp = {};
-                                read.dp.value = reading.recordGroup.record[key].field[0].value._text;
-                                read.dp.date = reading.recordGroup.record[key].dateTime._text;
-                                read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
-                                read.epimp.date = reading.recordGroup.record[key].dateTime._text;
-                                values.dp.push(read.dp);
-                                values.epimp.push(read.epimp);
-                            });
-                            cb(null, values);
+                            if(reading.recordGroup && reading.recordGroup.record){
+                                Object.keys(reading.recordGroup.record).forEach(function(key) {
+                                    read.dp = {};
+                                    read.epimp = {};
+                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text;
+                                    read.dp.date = reading.recordGroup.record[key].dateTime._text;
+                                    read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
+                                    read.epimp.date = reading.recordGroup.record[key].dateTime._text;
+                                    values.dp.push(read.dp);
+                                    values.epimp.push(read.epimp);
+                                });
+                                cb(null, values);
+                            } else {
+                                cb(true, null);
+                            }
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -301,6 +306,7 @@ module.exports = function(Meter) {
         'getReadingsByFilter', {
             accepts: [
                 { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
                 { arg: 'filter', type: 'number' }
             ],
             returns: { arg: 'values', type: 'object', root: true }
