@@ -45,7 +45,11 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
                     meter.latestValues.epimp = {};
                     Object.keys(reading.recordGroup.record).forEach(function(key) {
                         let read = {};
-                        read.value = reading.recordGroup.record[key].field.value._text;
+                        if(reading.recordGroup.record[key].field){
+                            read.value = reading.recordGroup.record[key].field.value._text;
+                        } else {
+                            read.value = "0";
+                        }
                         read.date = reading.recordGroup.record[key].dateTime._text;
 
                         meter.latestValues.epimp[key] = read;
@@ -70,7 +74,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
             };
             xhr.send();
         }, function(_err) {
-            console.log('error reading', _err);
+            if(_err) console.log('error reading', _err);
         });
     });
 }, function () {

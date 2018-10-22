@@ -33,22 +33,21 @@ const http = require('http');
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-var dailyReadings = new CronJob('*/5 * * * *', function () {
+var dailyReadings = new CronJob('*/1 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
             var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                 +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
 
-            //console.log('service to call:', serviceToCall);
+            // console.log('service to call:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                    let distribution = ( parseInt(reading.recordGroup.record[1].field.value._text) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
-                    let consumption = parseInt(reading.recordGroup.record[1].field.value._text);
-
-                    if(distribution || consumption){
+                    if(reading.recordGroup.record[1].field){
+                        let distribution = ( parseInt(reading.recordGroup.record[1].field.value._text) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
+                        let consumption = parseInt(reading.recordGroup.record[1].field.value._text);
                         let distributionCharge = distribution * Constants.CFE.values.distribution_price;
                         distribution = distribution.toFixed(2);
                         distributionCharge = distributionCharge.toFixed(2);
@@ -70,22 +69,20 @@ var dailyReadings = new CronJob('*/5 * * * *', function () {
                         } else {
                             meter.latestValues.consumption.daily = consumption;
                         }
-                        // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
-                        let company_id = meter.company().id;
-                        meter.unsetAttribute("company");
-                        meter.unsetAttribute("meter");
-                        meter.save(function(err, dsgMeter){
-                            let socketData = {
-                                socketEvent: 'dailyReading',
-                                data: dsgMeter.latestValues
-                            };
-                            socketData = JSON.stringify(socketData);
-                            Socket.sendMessageToCompanyUsers(company_id, socketData);
-                            next();
-                        });
-                    } else {
-                        next();
                     }
+                    // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
+                    let company_id = meter.company().id;
+                    meter.unsetAttribute("company");
+                    meter.unsetAttribute("meter");
+                    meter.save(function(err, dsgMeter){
+                        let socketData = {
+                            socketEvent: 'dailyReading',
+                            data: dsgMeter.latestValues
+                        };
+                        socketData = JSON.stringify(socketData);
+                        Socket.sendMessageToCompanyUsers(company_id, socketData);
+                        next();
+                    });
                 } else if (xhr.readyState === 4 && xhr.status !== 200) {
                     console.log('error: ', xhr.status);
                     next();
@@ -93,7 +90,7 @@ var dailyReadings = new CronJob('*/5 * * * *', function () {
             };
             xhr.send();
         }, function(_err) {
-            console.log('error reading', _err);
+            if(_err) console.log('error reading', _err);
         });
     });
 }, function () {
