@@ -439,4 +439,45 @@ module.exports = function(Meter) {
             returns: { arg: 'meter', type: 'object', root: true }
         }
     );
+
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(data, cb) {
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        let modelObject = data;
+        if(!modelObject || !modelObject.meter_id){
+            cb({status: 400, message: "Parametros faltantes"}, null);
+        } else {
+            DesignatedMeter.findOne({
+                where: {
+                    and: [
+                        { meter_id: modelObject.meter_id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"}, null);
+                if(meter){
+                    meter.device_name = modelObject.device_name;
+                    meter.summatory_device = modelObject.summatory_device,
+                    meter.hostname = modelObject.hostname;
+                    meter.max_value = parseInt(modelObject.max_value);
+                    meter.min_value = parseInt(modelObject.min_value);
+                    meter.company_id = modelObject.company_id;
+                    meter.updated_at = new Date();
+                    meter.save(function(_err, dsgMeter){
+                        if(_err) cb({status: 400, message: "Error al guardar los nuevos datos"}, null);
+                        else cb(null, dsgMeter);
+                    });
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'updateDesignatedMeter', {
+            accepts: [
+                { arg: 'data', type: 'object' }
+            ],
+            returns: { arg: 'response', type: 'object', root: true }
+        }
+    );
 };
