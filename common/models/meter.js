@@ -373,16 +373,48 @@ module.exports = function(Meter) {
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
+                    cb(null, meter.devices);
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'connectedDevices', {
+            accepts: [
+                { arg: 'id', type: 'string' }
+            ],
+            returns: { arg: 'devices', type: 'object', root: true }
+        }
+    );
+
+    Meter.storeConnectedDevices = function storeConnectedDevices(id, cb){
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                where: {
+                    and: [
+                        { id: id },
+                        { active: 1 }
+                    ]
+                },
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if(meter){
                     let service = meter.hostname+ API_PREFIX +"devices.xml";
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            var connectedDevices = [];
+                            meter.devices = [];
                             Object.keys(reading.devices.id).forEach(function(key) {
-                                connectedDevices.push(reading.devices.id[key]._text);
+                                meter.devices.push(reading.devices.id[key]._text);
                             });
-                            cb(null, connectedDevices);
+                            meter.save(function(err, dsgMeter){
+                                cb(null, dsgMeter);
+                            });
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -394,7 +426,7 @@ module.exports = function(Meter) {
     };
 
     Meter.remoteMethod(
-        'connectedDevices', {
+        'storeConnectedDevices', {
             accepts: [
                 { arg: 'id', type: 'string' }
             ],
