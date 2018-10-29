@@ -49,6 +49,7 @@ module.exports = function(Company) {
 
     Company.designateMeter = function designateMeter(data, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        var Meters = app.loopback.getModel('Meter');
         let modelObject = data;
         if(!modelObject || !modelObject.company_id || !modelObject.meter_id){
             cb({status: 400, message: "Parametros faltantes"}, null);

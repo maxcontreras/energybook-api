@@ -373,16 +373,48 @@ module.exports = function(Meter) {
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
+                    cb(null, meter.devices);
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'connectedDevices', {
+            accepts: [
+                { arg: 'id', type: 'string' }
+            ],
+            returns: { arg: 'devices', type: 'object', root: true }
+        }
+    );
+
+    Meter.storeConnectedDevices = function storeConnectedDevices(id, cb){
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                where: {
+                    and: [
+                        { id: id },
+                        { active: 1 }
+                    ]
+                },
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if(meter){
                     let service = meter.hostname+ API_PREFIX +"devices.xml";
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            var connectedDevices = [];
+                            meter.devices = [];
                             Object.keys(reading.devices.id).forEach(function(key) {
-                                connectedDevices.push(reading.devices.id[key]._text);
+                                meter.devices.push(reading.devices.id[key]._text);
                             });
-                            cb(null, connectedDevices);
+                            meter.save(function(err, dsgMeter){
+                                cb(null, dsgMeter);
+                            });
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -394,7 +426,7 @@ module.exports = function(Meter) {
     };
 
     Meter.remoteMethod(
-        'connectedDevices', {
+        'storeConnectedDevices', {
             accepts: [
                 { arg: 'id', type: 'string' }
             ],
@@ -437,6 +469,47 @@ module.exports = function(Meter) {
                 { arg: 'id', type: 'string' }
             ],
             returns: { arg: 'meter', type: 'object', root: true }
+        }
+    );
+
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(data, cb) {
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        let modelObject = data;
+        if(!modelObject || !modelObject.meter_id){
+            cb({status: 400, message: "Parametros faltantes"}, null);
+        } else {
+            DesignatedMeter.findOne({
+                where: {
+                    and: [
+                        { meter_id: modelObject.meter_id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"}, null);
+                if(meter){
+                    meter.device_name = modelObject.device_name;
+                    meter.summatory_device = modelObject.summatory_device,
+                    meter.hostname = modelObject.hostname;
+                    meter.max_value = parseInt(modelObject.max_value);
+                    meter.min_value = parseInt(modelObject.min_value);
+                    meter.company_id = modelObject.company_id;
+                    meter.updated_at = new Date();
+                    meter.save(function(_err, dsgMeter){
+                        if(_err) cb({status: 400, message: "Error al guardar los nuevos datos"}, null);
+                        else cb(null, dsgMeter);
+                    });
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'updateDesignatedMeter', {
+            accepts: [
+                { arg: 'data', type: 'object' }
+            ],
+            returns: { arg: 'response', type: 'object', root: true }
         }
     );
 };
