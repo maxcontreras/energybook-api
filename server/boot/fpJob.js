@@ -33,7 +33,7 @@ const http = require('http');
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-var fpReadings = new CronJob('*/55 * * * *', function () {
+var fpReadings = new CronJob('*/30 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
             var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
@@ -47,10 +47,7 @@ var fpReadings = new CronJob('*/55 * * * *', function () {
                     var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                     let summatory = 0;
                     if(reading.recordGroup.record){
-                        Object.keys(reading.recordGroup.record.field).forEach(function(key) {
-                            summatory += parseInt(reading.recordGroup.record.field[key].value._text);
-                        });
-
+                        summatory = parseFloat(reading.recordGroup.record.field.value._text) * 100;
                         summatory = summatory.toFixed(2);
                         // console.log('FP: '+ meter.device_name + ': value => ' + summatory);
                         meter.latestValues.lastUpdated = new Date();
