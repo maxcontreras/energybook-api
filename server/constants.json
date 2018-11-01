@@ -50,7 +50,8 @@
         "common_names":{
             "summatory_device": "R$CAL_Total",
             "summatory_dp": "DPT",
-            "summatory_epimp": "EPIMPT"
+            "summatory_epimp": "EPIMPT",
+            "summatory_pf": "FPT"
         }
     },
     "CFE": {

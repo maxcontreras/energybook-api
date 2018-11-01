@@ -33,21 +33,31 @@ const http = require('http');
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-var dailyReadings = new CronJob('*/1 * * * *', function () {
+var dailyReadings = new CronJob('*/60 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
             var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
-
+                +dates.end;
+            Object.keys(meter.devices).forEach(function(key) {
+                serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+            });
+            serviceToCall = serviceToCall + "?period=" + dates.period;
             // console.log('service to call:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                    if(reading.recordGroup.record[1].field){
-                        let distribution = ( parseInt(reading.recordGroup.record[1].field.value._text) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
-                        let consumption = parseInt(reading.recordGroup.record[1].field.value._text);
+                    let summatory = 0;
+                    if(reading.recordGroup.record){
+                        Object.keys(reading.recordGroup.record).forEach(function(key) {
+                            Object.keys(reading.recordGroup.record[key].field).forEach(function(i) {
+                                summatory += parseInt(reading.recordGroup.record[key].field[i].value._text);
+                            });
+                        });
+
+                        let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
+                        let consumption = parseInt(summatory);
                         let distributionCharge = distribution * Constants.CFE.values.distribution_price;
                         distribution = distribution.toFixed(2);
                         distributionCharge = distributionCharge.toFixed(2);
@@ -69,20 +79,25 @@ var dailyReadings = new CronJob('*/1 * * * *', function () {
                         } else {
                             meter.latestValues.consumption.daily = consumption;
                         }
-                    }
-                    // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
-                    let company_id = meter.company().id;
-                    meter.unsetAttribute("company");
-                    meter.unsetAttribute("meter");
-                    meter.save(function(err, dsgMeter){
-                        let socketData = {
-                            socketEvent: 'dailyReading',
-                            data: dsgMeter.latestValues
-                        };
-                        socketData = JSON.stringify(socketData);
-                        Socket.sendMessageToCompanyUsers(company_id, socketData);
+                        // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
+                        let company_id = meter.company().id;
+                        meter.unsetAttribute("company");
+                        meter.unsetAttribute("meter");
+                        meter.save(function(err, dsgMeter){
+                            if(err) next(err, null);
+                            else {
+                                let socketData = {
+                                    socketEvent: 'dailyReading',
+                                    data: dsgMeter.latestValues
+                                };
+                                socketData = JSON.stringify(socketData);
+                                Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                next();
+                            }
+                        });
+                    } else {
                         next();
-                    });
+                    }
                 } else if (xhr.readyState === 4 && xhr.status !== 200) {
                     console.log('error: ', xhr.status);
                     next();

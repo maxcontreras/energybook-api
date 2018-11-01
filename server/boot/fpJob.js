@@ -3,6 +3,7 @@ const moment = require('moment-timezone');
 const async = require('async');
 const app = require('./../server');
 const Meters = app.loopback.getModel('Meter');
+const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 const Constants = require('./../../server/constants.json');
 const EDS = require('../../server/modules/eds-connector');
 const WS = require('../boot/websockets');
@@ -10,7 +11,7 @@ var Socket = new WS;
 const Converter = require('xml-js');
 
 const API_PREFIX = "/services/user/";
-const DEFAULT_HOURS = 24;
+const DEFAULT_DAYS = 1;
 const CHARGE_FACTOR = Constants.CFE.values.charge_factor;
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
@@ -27,21 +28,19 @@ const OPTIONS_JS2XML = {
     fullTagEmptyElement:false
 };
 
+const http = require('http');
+
 moment.tz.setDefault("America/Mexico_City");
 var timezone = 'America/Mexico_City';
 
-
-var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
+var fpReadings = new CronJob('*/55 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
             var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                +dates.end;
-            Object.keys(meter.devices).forEach(function(key) {
-                serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
-            });
-            serviceToCall = serviceToCall + "?period=" + dates.period;
-            // console.log('serviceToCall:', serviceToCall);
+                +dates.end + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_pf + "?period=" + dates.period;
+
+            // console.log('service to call:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
@@ -51,26 +50,17 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                         Object.keys(reading.recordGroup.record.field).forEach(function(key) {
                             summatory += parseInt(reading.recordGroup.record.field[key].value._text);
                         });
-                        let distribution = ( parseInt(summatory) / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
-                        let consumption = parseInt(summatory);
-                        distribution = distribution.toFixed(2);
-                        consumption = consumption.toFixed(2);
 
+                        summatory = summatory.toFixed(2);
+                        // console.log('FP: '+ meter.device_name + ': value => ' + summatory);
                         meter.latestValues.lastUpdated = new Date();
-                        if(!meter.latestValues.distribution){
-                            meter.latestValues.distribution = {};
-                            meter.latestValues.distribution.monthly = distribution;
+                        if(!meter.latestValues.fp){
+                            meter.latestValues.fp = {};
+                            meter.latestValues.fp.value = summatory;
                         } else {
-                            meter.latestValues.distribution.monthly = distribution;
+                            meter.latestValues.fp.value = summatory;
                         }
 
-                        if(!meter.latestValues.consumption){
-                            meter.latestValues.consumption = {};
-                            meter.latestValues.consumption.monthly = consumption;
-                        } else {
-                            meter.latestValues.consumption.monthly = consumption;
-                        }
-                        // console.log('monthly dist: '+ meter.device_name + ': value => ' + meter.latestValues.distribution);
                         let company_id = meter.company().id;
                         meter.unsetAttribute("company");
                         meter.unsetAttribute("meter");
@@ -78,8 +68,8 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                             if(err) next(err, null);
                             else {
                                 let socketData = {
-                                    socketEvent: 'monthlyReading',
-                                    data: meter.latestValues
+                                    socketEvent: 'odometerReading',
+                                    data: meter.latestValues.dp
                                 };
                                 socketData = JSON.stringify(socketData);
                                 Socket.sendMessageToCompanyUsers(company_id, socketData);
@@ -90,13 +80,13 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                         next();
                     }
                 } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                    var reading = {};
+                    console.log('error: ', xhr.status);
                     next();
                 }
             };
             xhr.send();
         }, function(_err) {
-            console.log('error reading', _err);
+            if(_err) console.log('error reading', _err);
         });
     });
 }, function () {
@@ -105,29 +95,3 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
     true,
     timezone
 );
-
-function Demand(){
-    var self = this;
-
-    self.init = function(){
-        this.monthlyReadings =  monthlyReadings;
-    }
-
-    self.getDemand = function getDemand(meter){
-        EDS.readDemand(meter, function(err, demand){
-            if(demand){
-                let socketData = {
-                    socketEvent: 'demandReading',
-                    data: demand
-                };
-                socketData = JSON.stringify(socketData);
-                Socket.sendMessageToCompanyUsers(meter.company().id, socketData);
-                return;
-            }
-        });
-    }
-
-    self.init();
-}
-
-module.exports = Demand;
