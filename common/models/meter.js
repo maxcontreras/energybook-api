@@ -280,7 +280,7 @@ module.exports = function(Meter) {
                                 Object.keys(reading.recordGroup.record).forEach(function(key) {
                                     read.dp = {};
                                     read.epimp = {};
-                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text;
+                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text/1000;
                                     read.dp.date = reading.recordGroup.record[key].dateTime._text;
                                     read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
                                     read.epimp.date = reading.recordGroup.record[key].dateTime._text;
