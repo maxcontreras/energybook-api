@@ -60,15 +60,19 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                         const milliseconds = parseInt(reading.recordGroup.record.dateTime._text.slice(14));
                         let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
                         utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
-                        const ct_date = moment(utc_date).tz('America/Mexico_City');
+                        const ct_date = moment(utc_date).tz(timezone);
                         
                         let distribution = ( parseInt(summatory) / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
                         let consumption = parseInt(summatory);
                         distribution = distribution.toFixed(2);
                         consumption = consumption.toFixed(2);
 
-                        meter.latestValues.ct_date = ct_date;
-                        meter.latestValues.lastUpdated = new Date();
+                        if (meter.medition_times) {
+                            meter.medition_times.push(ct_date.format());
+                        } else {
+                            meter.medition_times =[ct_date.format()];
+                        }
+                        meter.latestValues.lastUpdated = ct_date.format();
                         if(!meter.latestValues.distribution){
                             meter.latestValues.distribution = {};
                             meter.latestValues.distribution.monthly = distribution;
