@@ -37,7 +37,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                 +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
 
-            console.log('serviceToCall:', serviceToCall);
+            // console.log('serviceToCall:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
