@@ -37,7 +37,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
             let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                 +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
 
-            // console.log('serviceToCall:', serviceToCall);
+            console.log('serviceToCall:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
@@ -47,6 +47,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
                         let read = {};
                         if(reading.recordGroup.record[key].field){
                             read.value = reading.recordGroup.record[key].field.value._text/1000;
+                            read.value = read.value.toFixed(2);
                         } else {
                             read.value = "0";
                         }
