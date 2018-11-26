@@ -5,6 +5,7 @@ const EDS = require('../../server/modules/eds-connector');
 const async = require('async');
 const API_PREFIX = "/services/user/";
 const Converter = require('xml-js');
+const moment = require('moment-timezone');
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const xhr = new XMLHttpRequest();
@@ -19,6 +20,9 @@ const OPTIONS_JS2XML = {
     compact: true,
     fullTagEmptyElement:false
 };
+
+moment.tz.setDefault("America/Mexico_City");
+var timezone = 'America/Mexico_City';
 
 module.exports = function(Meter) {
 
@@ -280,8 +284,18 @@ module.exports = function(Meter) {
                                 Object.keys(reading.recordGroup.record).forEach(function(key) {
                                     read.dp = {};
                                     read.epimp = {};
-                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text;
-                                    read.dp.date = reading.recordGroup.record[key].dateTime._text;
+                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text / 1000;
+                                    read.dp.value = read.dp.value.toFixed(2);
+                                    const day = parseInt(reading.recordGroup.record[key].dateTime._text.slice(0,2));
+                                    const month = parseInt(reading.recordGroup.record[key].dateTime._text.slice(2,4))-1;
+                                    const year = parseInt(reading.recordGroup.record[key].dateTime._text.slice(4,8));
+                                    const hour = parseInt(reading.recordGroup.record[key].dateTime._text.slice(8,10));
+                                    const minute = parseInt(reading.recordGroup.record[key].dateTime._text.slice(10,12));
+                                    const second = parseInt(reading.recordGroup.record[key].dateTime._text.slice(12,14));
+                                    const milliseconds = parseInt(reading.recordGroup.record[key].dateTime._text.slice(14));
+                                    let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
+                                    utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
+                                    read.dp.date = moment(utc_date).tz(timezone);
                                     read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
                                     read.epimp.date = reading.recordGroup.record[key].dateTime._text;
                                     values.dp.push(read.dp);

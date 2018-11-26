@@ -51,12 +51,28 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                         Object.keys(reading.recordGroup.record.field).forEach(function(key) {
                             summatory += parseInt(reading.recordGroup.record.field[key].value._text);
                         });
+                        const day = parseInt(reading.recordGroup.record.dateTime._text.slice(0,2));
+                        const month = parseInt(reading.recordGroup.record.dateTime._text.slice(2,4))-1;
+                        const year = parseInt(reading.recordGroup.record.dateTime._text.slice(4,8));
+                        const hour = parseInt(reading.recordGroup.record.dateTime._text.slice(8,10));
+                        const minute = parseInt(reading.recordGroup.record.dateTime._text.slice(10,12));
+                        const second = parseInt(reading.recordGroup.record.dateTime._text.slice(12,14));
+                        const milliseconds = parseInt(reading.recordGroup.record.dateTime._text.slice(14));
+                        let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
+                        utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
+                        const ct_date = moment(utc_date).tz(timezone);
+                        
                         let distribution = ( parseInt(summatory) / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
                         let consumption = parseInt(summatory);
                         distribution = distribution.toFixed(2);
                         consumption = consumption.toFixed(2);
 
-                        meter.latestValues.lastUpdated = new Date();
+                        if (meter.medition_times) {
+                            meter.medition_times.push(ct_date.format());
+                        } else {
+                            meter.medition_times =[ct_date.format()];
+                        }
+                        meter.latestValues.lastUpdated = ct_date.format();
                         if(!meter.latestValues.distribution){
                             meter.latestValues.distribution = {};
                             meter.latestValues.distribution.monthly = distribution;
