@@ -46,7 +46,7 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
                     Object.keys(reading.recordGroup.record).forEach(function(key) {
                         let read = {};
                         if(reading.recordGroup.record[key].field){
-                            read.value = reading.recordGroup.record[key].field.value._text;
+                            read.value = parseFloat(reading.recordGroup.record[key].field.value._text);
                             read.value = read.value.toFixed(2);
                         } else {
                             read.value = "0";
