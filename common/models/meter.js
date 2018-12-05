@@ -275,6 +275,7 @@ module.exports = function(Meter) {
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                                    
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
@@ -286,6 +287,7 @@ module.exports = function(Meter) {
                                     read.epimp = {};
                                     read.dp.value = reading.recordGroup.record[key].field[0].value._text / 1000;
                                     read.dp.value = read.dp.value.toFixed(2);
+                                    read.dp.value = (read.dp.value < 0)? 0:read.dp.value;
                                     const day = parseInt(reading.recordGroup.record[key].dateTime._text.slice(0,2));
                                     const month = parseInt(reading.recordGroup.record[key].dateTime._text.slice(2,4))-1;
                                     const year = parseInt(reading.recordGroup.record[key].dateTime._text.slice(4,8));
@@ -295,9 +297,10 @@ module.exports = function(Meter) {
                                     const milliseconds = parseInt(reading.recordGroup.record[key].dateTime._text.slice(14));
                                     let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
                                     utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
-                                    read.dp.date = moment(utc_date).tz(timezone);
+                                    read.dp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
                                     read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
-                                    read.epimp.date = reading.recordGroup.record[key].dateTime._text;
+                                    read.epimp.value = (read.epimp.value < 0)? 0:read.epimp.value;
+                                    read.epimp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
                                     values.dp.push(read.dp);
                                     values.epimp.push(read.epimp);
                                 });

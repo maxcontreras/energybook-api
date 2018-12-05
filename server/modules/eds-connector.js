@@ -164,66 +164,64 @@ var panelReadings = function panelReadings(filter, meter, next){
     });
 };
 
+// Receives a date in YYYY-MM-DD HH:mm:ss format and converts it into DDMMYYYYHHMMSS
+var parseDate = function(date) {
+    let newDate = date.split(/[: -]+/);
+    return newDate[2]+newDate[1]+newDate[0]+newDate[3]+newDate[4]+newDate[5];
+}
+
 var dateFilterSetup = function dateFilterSetup(filter){
     // TODO: Investigar que putas con la agrupacion por periodo y agregarlo en obj date.
     let date = [];
     switch (filter) {
         case Constants.Meters.filters.today:
-            date.begin = moment().format('DDMMYYYY');
-            date.end = moment().format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 3600;
             return date;
-            break;
         case Constants.Meters.filters.yesterday:
-            date.begin = moment().subtract(1, 'days').format('DDMMYYYY');
-            date.end = moment().subtract(1, 'days').format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").subtract(1, "days").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").subtract(1, "days").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 3600;
             return date;
-            break;
         case Constants.Meters.filters.week:
-            date.begin = moment().startOf('week').format('DDMMYYYY');
-            date.end = moment().endOf('week').format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf('week').add(6,"hours").format('YYYY-MM-DD HH:mm:ss'));
+            date.end = parseDate(moment().endOf('week').add(6,"hours").format('YYYY-MM-DD HH:mm:ss'));
             date.period = 86400;
             return date;
-            break;
         case Constants.Meters.filters.month:
-            date.begin = moment().startOf('month').format('DDMMYYYY');
-            date.end = moment().endOf('week').format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf('week').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 86400;
             return date;
-            break;
         case Constants.Meters.filters.year:
-            date.begin = moment().startOf('year').format('DDMMYYYY');
-            date.end = moment().endOf('year').format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf('year').add(6,"hours").format('YYYY-MM-DD HH:mm:ss'));
+            date.end = parseDate(moment().endOf('year').add(6,"hours").format('YYYY-MM-DD HH:mm:ss'));
             date.period = 86400;
             return date;
-            break;
+        // TODO: Update the following when the time comes
         case Constants.Meters.filters.custom:
             date.begin = moment().format('DDMMYYYY');
             date.end = moment().format('DDMMYYYY');
             date.period = 900;
             return date;
-            break;
         case Constants.Meters.filters.latest:
             date.begin = moment().format('DDMMYYYY');
             date.end = moment().format('DDMMYYYY');
             date.period = 5;
             return date;
-            break;
         case Constants.Meters.filters.dayAVG:
             date.begin = moment().format('DDMMYYYY');
             date.end = moment().format('DDMMYYYY');
             date.period = 86400;
             date.hour = moment().hour();
             return date;
-            break;
         case Constants.Meters.filters.monthAVG:
             date.begin = moment().startOf('month').format('DDMMYYYY');
             date.end = moment().endOf('month').format('DDMMYYYY');
             date.period = 2592000;
             date.day = moment().date();
             return date;
-            break;
         default:
             date.begin = moment().format('DDMMYYYY');
             date.end = moment().format('DDMMYYYY');
@@ -232,6 +230,7 @@ var dateFilterSetup = function dateFilterSetup(filter){
     }
 }
 
+module.exports.parseDate = parseDate;
 module.exports.performEDSrequest = performEDSrequest;
 module.exports.getDeviceInfo = getDeviceInfo;
 module.exports.getAllDeviceVariables = getAllDeviceVariables;
