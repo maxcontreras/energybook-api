@@ -191,7 +191,7 @@ var dateFilterSetup = function dateFilterSetup(filter){
             return date;
         case Constants.Meters.filters.month:
             date.begin = parseDate(moment().startOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
-            date.end = parseDate(moment().endOf('week').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 86400;
             return date;
         case Constants.Meters.filters.year:
