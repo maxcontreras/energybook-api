@@ -33,41 +33,48 @@ var timezone = 'America/Mexico_City';
 var epimpHistory = new CronJob('*/60 * * * *', function () {
     Meters.getActivesAssigned(function(err, meters) {
         async.each(meters, function(meter, next){
-            var dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
-            let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                +dates.end+ "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_epimp+ "?period=" +dates.period;
-
+            let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
+            let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+            meter.devices.map(device => {
+                serviceToCall += "?var="+device+".EPimp";
+            });
+            serviceToCall += "?period=" +dates.period;
             // console.log('serviceToCall:', serviceToCall);
             xhr.open('GET', serviceToCall, false);
             xhr.onreadystatechange = function(){
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                    meter.latestValues.epimp = {};
-                    Object.keys(reading.recordGroup.record).forEach(function(key) {
-                        let read = {};
-                        if(reading.recordGroup.record[key].field){
-                            read.value = parseFloat(reading.recordGroup.record[key].field.value._text);
-                            read.value = read.value.toFixed(2);
-                        } else {
-                            read.value = "0";
-                        }
-                        read.date = reading.recordGroup.record[key].dateTime._text;
-
-                        meter.latestValues.epimp[key] = read;
-                    });
-
-                    let company_id = meter.company().id;
-                    meter.unsetAttribute("company");
-                    meter.unsetAttribute("meter");
-                    meter.save(function(err, dsgMeter){
-                        let socketData = {
-                            socketEvent: 'epimpHistoryReading',
-                            data: meter.latestValues.epimp
-                        };
-                        socketData = JSON.stringify(socketData);
-                        Socket.sendMessageToCompanyUsers(company_id, socketData);
-                        next();
-                    });
+                    if (reading.recordGroup && reading.recordGroup.record) {
+                        meter.latestValues.epimp = {};
+                        reading.recordGroup.record.map( (item, key) => {
+                            console.log(JSON.stringify(item, null, 2));
+                            let read = {};
+                            if(item.field){
+                                read.value = 0;
+                                item.field.map(device => {
+                                    read.value += parseFloat(device.value._text);
+                                });
+                                read.value = read.value.toFixed(2);
+                            } else {
+                                read.value = "0";
+                            }
+                            read.date = item.dateTime._text;
+                            meter.latestValues.epimp[key] = read;
+                        });
+    
+                        let company_id = meter.company().id;
+                        meter.unsetAttribute("company");
+                        meter.unsetAttribute("meter");
+                        meter.save(function(err, dsgMeter){
+                            let socketData = {
+                                socketEvent: 'epimpHistoryReading',
+                                data: meter.latestValues.epimp
+                            };
+                            socketData = JSON.stringify(socketData);
+                            Socket.sendMessageToCompanyUsers(company_id, socketData);
+                            next();
+                        });
+                    }
                 } else if (xhr.readyState === 4 && xhr.status !== 200) {
                     var reading = {};
                     next();
