@@ -55,7 +55,7 @@ var dailyReadings = new CronJob('*/60 * * * *', function () {
                         });
 
                         let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
-                        let consumption = parseInt(summatory);
+                        let consumption = summatory
                         let distributionCharge = distribution * Constants.CFE.values.distribution_price;
                         distribution = distribution.toFixed(2);
                         distributionCharge = distributionCharge.toFixed(2);
