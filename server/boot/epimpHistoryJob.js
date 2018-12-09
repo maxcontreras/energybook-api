@@ -47,7 +47,6 @@ var epimpHistory = new CronJob('*/60 * * * *', function () {
                     if (reading.recordGroup && reading.recordGroup.record) {
                         meter.latestValues.epimp = {};
                         reading.recordGroup.record.map( (item, key) => {
-                            console.log(JSON.stringify(item, null, 2));
                             let read = {};
                             if(item.field){
                                 read.value = 0;
