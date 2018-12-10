@@ -191,7 +191,7 @@ var dateFilterSetup = function dateFilterSetup(filter){
             return date;
         case Constants.Meters.filters.month:
             date.begin = parseDate(moment().startOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
-            date.end = parseDate(moment().endOf('week').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 86400;
             return date;
         case Constants.Meters.filters.year:
@@ -201,30 +201,30 @@ var dateFilterSetup = function dateFilterSetup(filter){
             return date;
         // TODO: Update the following when the time comes
         case Constants.Meters.filters.custom:
-            date.begin = moment().format('DDMMYYYY');
-            date.end = moment().format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 900;
             return date;
         case Constants.Meters.filters.latest:
-            date.begin = moment().format('DDMMYYYY');
-            date.end = moment().format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 5;
             return date;
         case Constants.Meters.filters.dayAVG:
-            date.begin = moment().format('DDMMYYYY');
-            date.end = moment().format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 86400;
             date.hour = moment().hour();
             return date;
         case Constants.Meters.filters.monthAVG:
-            date.begin = moment().startOf('month').format('DDMMYYYY');
-            date.end = moment().endOf('month').format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 2592000;
             date.day = moment().date();
             return date;
         default:
-            date.begin = moment().format('DDMMYYYY');
-            date.end = moment().format('DDMMYYYY');
+            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 900;
             return date;
     }

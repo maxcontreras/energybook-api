@@ -50,14 +50,12 @@ var dailyReadings = new CronJob('*/60 * * * *', function () {
                     var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                     let summatory = 0;
                     if(reading.recordGroup.record){
-                        Object.keys(reading.recordGroup.record).forEach(function(key) {
-                            Object.keys(reading.recordGroup.record[key].field).forEach(function(i) {
-                                summatory += parseInt(reading.recordGroup.record[key].field[i].value._text);
-                            });
+                        reading.recordGroup.record.field.map(item=> {
+                            summatory += parseFloat(item.value._text);
                         });
 
                         let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
-                        let consumption = parseInt(summatory);
+                        let consumption = summatory
                         let distributionCharge = distribution * Constants.CFE.values.distribution_price;
                         distribution = distribution.toFixed(2);
                         distributionCharge = distributionCharge.toFixed(2);
