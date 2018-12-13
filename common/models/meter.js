@@ -6,6 +6,7 @@ const async = require('async');
 const API_PREFIX = "/services/user/";
 const Converter = require('xml-js');
 const moment = require('moment-timezone');
+const Constants = require('./../../server/constants.json');
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const xhr = new XMLHttpRequest();
@@ -245,7 +246,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getReadingsByFilter = function getReadingsByFilter(id, device, filter, cb){
+    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -268,10 +269,18 @@ module.exports = function(Meter) {
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
-                    let values = {};
-                    values.dp = [];
-                    values.epimp = [];
+                    // Dp values
+                    let values = [];
                     var dates = EDS.dateFilterSetup(filter);
+                    
+                    // Check period of the graph
+                    if (filter === Constants.Meters.filters.today || 
+                        filter === Constants.Meters.filters.yesterday ||
+                        filter === Constants.Meters.filters.week ||
+                        filter === Constants.Meters.filters.month) {
+                        // Change period of readings to every 15 minutes = 900 seconds
+                        dates.period = 900;
+                    }
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
@@ -279,7 +288,7 @@ module.exports = function(Meter) {
                     xhr.onreadystatechange = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            let read = {};
+                            let dp = {};
                             if(reading.recordGroup && reading.recordGroup.record){
                                 let iterable = [];
                                 if (!Array.isArray(reading.recordGroup.record)) {
@@ -288,11 +297,10 @@ module.exports = function(Meter) {
                                     iterable = reading.recordGroup.record;
                                 }
                                 iterable.map(item => {
-                                    read.dp = {};
-                                    read.epimp = {};
-                                    read.dp.value = item.field[0].value._text / 1000;
-                                    read.dp.value = read.dp.value.toFixed(2);
-                                    read.dp.value = (read.dp.value < 0)? 0:read.dp.value;
+                                    dp = {};
+                                    dp.value = item.field[0].value._text / 1000;
+                                    dp.value = dp.value.toFixed(2);
+                                    dp.value = (dp.value < 0)? 0:dp.value;
                                     const day = parseInt(item.dateTime._text.slice(0,2));
                                     const month = parseInt(item.dateTime._text.slice(2,4))-1;
                                     const year = parseInt(item.dateTime._text.slice(4,8));
@@ -302,35 +310,91 @@ module.exports = function(Meter) {
                                     const milliseconds = parseInt(item.dateTime._text.slice(14));
                                     let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
                                     utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
-                                    read.dp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
-                                    read.epimp.value = item.field[1].value._text;
-                                    read.epimp.value = (read.epimp.value < 0)? 0:read.epimp.value;
-                                    read.epimp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
-                                    values.dp.push(read.dp);
-                                    values.epimp.push(read.epimp);
+                                    dp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
+                                    values.push(dp);
                                 });
-                                /* Object.keys(reading.recordGroup.record).forEach(function(key) {
-                                    read.dp = {};
-                                    read.epimp = {};
-                                    read.dp.value = reading.recordGroup.record[key].field[0].value._text / 1000;
-                                    read.dp.value = read.dp.value.toFixed(2);
-                                    read.dp.value = (read.dp.value < 0)? 0:read.dp.value;
-                                    const day = parseInt(reading.recordGroup.record[key].dateTime._text.slice(0,2));
-                                    const month = parseInt(reading.recordGroup.record[key].dateTime._text.slice(2,4))-1;
-                                    const year = parseInt(reading.recordGroup.record[key].dateTime._text.slice(4,8));
-                                    const hour = parseInt(reading.recordGroup.record[key].dateTime._text.slice(8,10));
-                                    const minute = parseInt(reading.recordGroup.record[key].dateTime._text.slice(10,12));
-                                    const second = parseInt(reading.recordGroup.record[key].dateTime._text.slice(12,14));
-                                    const milliseconds = parseInt(reading.recordGroup.record[key].dateTime._text.slice(14));
+                                cb(null, values);
+                            } else {
+                                cb(true, null);
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    };
+                    xhr.send();
+                }
+            });
+        }
+    }
+
+    Meter.remoteMethod(
+        'getDpReadingsByFilter', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
+                { arg: 'filter', type: 'number' }
+            ],
+            returns: { arg: 'values', type: 'array', root: true }
+        }
+    );
+
+    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, cb){
+        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                },
+            }, function(err, meter){
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if(meter){
+                    // Epimp values
+                    let values = [];
+                    var dates = EDS.dateFilterSetup(filter);
+
+                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    xhr.open('GET', service, false);
+                    xhr.onreadystatechange = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let epimp = {};
+                            if(reading.recordGroup && reading.recordGroup.record){
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    iterable.push(reading.recordGroup.record)
+                                } else {
+                                    iterable = reading.recordGroup.record;
+                                }
+                                iterable.map(item => {
+                                    epimp = {};
+                                    const day = parseInt(item.dateTime._text.slice(0,2));
+                                    const month = parseInt(item.dateTime._text.slice(2,4))-1;
+                                    const year = parseInt(item.dateTime._text.slice(4,8));
+                                    const hour = parseInt(item.dateTime._text.slice(8,10));
+                                    const minute = parseInt(item.dateTime._text.slice(10,12));
+                                    const second = parseInt(item.dateTime._text.slice(12,14));
+                                    const milliseconds = parseInt(item.dateTime._text.slice(14));
                                     let utc_date = new Date(year, month, day, hour, minute, second, milliseconds);
                                     utc_date = new Date(utc_date-new Date(2.16e7)).toISOString();
-                                    read.dp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
-                                    read.epimp.value = reading.recordGroup.record[key].field[1].value._text;
-                                    read.epimp.value = (read.epimp.value < 0)? 0:read.epimp.value;
-                                    read.epimp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
-                                    values.dp.push(read.dp);
-                                    values.epimp.push(read.epimp);
-                                }); */
+                                    epimp.value = item.field[1].value._text;
+                                    epimp.value = (epimp.value < 0)? 0:epimp.value;
+                                    epimp.date = EDS.parseDate(moment(utc_date).tz(timezone).format('YYYY-MM-DD HH:mm:ss'));
+                                    values.push(epimp);
+                                });
                                 cb(null, values);
                             } else {
                                 cb(true, null);
@@ -346,13 +410,13 @@ module.exports = function(Meter) {
     };
 
     Meter.remoteMethod(
-        'getReadingsByFilter', {
+        'getEpimpReadingsByFilter', {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
                 { arg: 'filter', type: 'number' }
             ],
-            returns: { arg: 'values', type: 'object', root: true }
+            returns: { arg: 'values', type: 'array', root: true }
         }
     );
 
