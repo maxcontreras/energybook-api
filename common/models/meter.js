@@ -248,6 +248,7 @@ module.exports = function(Meter) {
 
     Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        console.log("Values are ", id, device);
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
         else {
@@ -417,6 +418,59 @@ module.exports = function(Meter) {
                 { arg: 'filter', type: 'number' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
+        }
+    );
+
+    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, cb) {
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter) {
+                console.log(err);
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if (meter) {
+                    // TODO: calculate costs 
+                    let dates = { begin: 'hoy alv', end: 'manana alv', period: 900 };
+                    let service = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
+                    if (device) {
+                        service += "?var=" + device + ".EPimp";
+                    } else {
+                        meter.devices.map(device => {
+                            service += "?var="+device+".EPimp";
+                        });
+                    }
+                    service += "?period=" + dates.period;
+                    console.log("Service to call: ", service);
+                    cb(null, {response: 'OK 200'});
+                }
+            });
+        }
+    };
+
+    Meter.remoteMethod(
+        'getConsumptionCostsByFilter', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
+                { arg: 'filter', type: 'number' }
+            ],
+            returns: { arg: 'costs', type: 'object', root: true }
         }
     );
 
