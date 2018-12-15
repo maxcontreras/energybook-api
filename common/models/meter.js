@@ -442,11 +442,12 @@ module.exports = function(Meter) {
                     ]
                 }
             }, function(err, meter) {
-                console.log(err);
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if (meter) {
                     // TODO: calculate costs 
-                    let dates = { begin: 'hoy alv', end: 'manana alv', period: 900 };
+                    let dates = EDS.dateFilterSetup(filter);
+                    // Set period fixed to 1 hour
+                    dates.period = 3600;
                     let service = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
                     if (device) {
                         service += "?var=" + device + ".EPimp";
@@ -456,8 +457,74 @@ module.exports = function(Meter) {
                         });
                     }
                     service += "?period=" + dates.period;
-                    console.log("Service to call: ", service);
-                    cb(null, {response: 'OK 200'});
+                    console.log("Service to call ", service);
+                    xhr.open('GET', service, false);
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let values = [];
+                            if (reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }
+                                values = records.map(item => {
+                                    let read = {};
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let date = moment(tmp_date).tz(timezone);
+                                    
+                                    // get CFE period
+                                    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
+                                    let curr_period = 0;
+                                    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
+                                        curr_period = 1;
+                                    }
+
+                                    // get day of the week
+                                    let curr_day = "monday-friday";
+                                    if (date.day() === 0) {
+                                        curr_day = "sunday";
+                                    } else if (date.day() === 6) {
+                                        curr_day = "saturday";
+                                    }
+
+                                    // obtain corresponding rate
+                                    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
+                                    const rate = Constants.CFE.values.consumption_price[rate_type];
+
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field)
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let sum = 0;
+                                    for (let medition of iterable) {
+                                        if (!medition) continue;
+                                        sum += parseFloat(medition.value._text);
+                                    }
+                                    
+                                    // Result object
+                                    read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                    read.cost = (sum*rate).toFixed(3);
+                                    read.rate = rate_type;
+                                    return read;
+                                });
+                            }
+                            cb(null, values);
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    };
+                    xhr.send();
                 }
             });
         }
@@ -470,7 +537,7 @@ module.exports = function(Meter) {
                 { arg: 'device', type: 'string' },
                 { arg: 'filter', type: 'number' }
             ],
-            returns: { arg: 'costs', type: 'object', root: true }
+            returns: { arg: 'costs', type: 'array', root: true }
         }
     );
 
