@@ -248,7 +248,6 @@ module.exports = function(Meter) {
 
     Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        console.log("Values are ", id, device);
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
         else {
