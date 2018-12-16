@@ -457,7 +457,7 @@ module.exports = function(Meter) {
                         });
                     }
                     service += "?period=" + dates.period;
-                    console.log("Service to call ", service);
+                    //console.log("Service to call ", service);
                     xhr.open('GET', service, false);
                     xhr.onreadystatechange = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
