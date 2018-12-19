@@ -513,7 +513,7 @@ module.exports = function(Meter) {
                                     
                                     // Result object
                                     read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
-                                    read.cost = (sum*rate).toFixed(3);
+                                    read.cost = (sum*rate).toFixed(2);
                                     read.rate = rate_type;
                                     return read;
                                 });
