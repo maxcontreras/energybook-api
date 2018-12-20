@@ -51,12 +51,12 @@ var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
                         Object.keys(reading.recordGroup.record.field).forEach(function(key) {
                             summatory += parseInt(reading.recordGroup.record.field[key].value._text);
                         });
-                        const day = item.dateTime._text.slice(0,2);
-                        const month = item.dateTime._text.slice(2,4);
-                        const year = item.dateTime._text.slice(4,8);
-                        const hour = item.dateTime._text.slice(8,10);
-                        const minute = item.dateTime._text.slice(10,12);
-                        const second = item.dateTime._text.slice(12,14);
+                        const day = reading.recordGroup.record.dateTime._text.slice(0,2);
+                        const month = reading.recordGroup.record.dateTime._text.slice(2,4);
+                        const year = reading.recordGroup.record.dateTime._text.slice(4,8);
+                        const hour = reading.recordGroup.record.dateTime._text.slice(8,10);
+                        const minute = reading.recordGroup.record.dateTime._text.slice(10,12);
+                        const second = reading.recordGroup.record.dateTime._text.slice(12,14);
                         const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                         let utc_date = moment(tmp_date).tz(timezone);
                         
