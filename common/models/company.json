@@ -20,10 +20,10 @@
       "required": true
     },
     "location": {
-      "type": "string"
+      "type": "object"
     },
     "size": {
-      "type": "number"
+      "type": "string"
     },
     "image": {
       "type": "string"
@@ -39,6 +39,9 @@
     },
     "updated_at": {
       "type": "date"
+    },
+    "address": {
+      "type": "string"
     }
   },
   "validations": [],
