@@ -28,6 +28,9 @@
       "required": true,
       "default": 1
     },
+    "position": {
+      "type": "string"
+    },
     "role_id": {
       "type": "number",
       "required": true,
