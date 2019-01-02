@@ -278,7 +278,11 @@ module.exports = function(Designatedmeter) {
                         let P = 0;
                         let Q = 0;
                         if(reading.recordGroup.record){
-                            reading.recordGroup.record.field.map(read => {
+                            let iterate = reading.recordGroup.record;
+                            if (Array.isArray(iterate)) {
+                                iterate = iterate[0];
+                            }
+                            iterate.field.map(read => {
                                 const type = read.id._text.split('.')[1];
                                 let value = parseFloat(read.value._text);
                                 if (type === 'EPimp') {
@@ -359,15 +363,19 @@ module.exports = function(Designatedmeter) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         let summatory = 0;
                         if(reading.recordGroup.record){
-                            Object.keys(reading.recordGroup.record.field).forEach(function(key) {
-                                summatory += parseInt(reading.recordGroup.record.field[key].value._text);
+                            let iterate = reading.recordGroup.record;
+                            if (Array.isArray(iterate)) {
+                                iterate = iterate[0];
+                            }
+                            Object.keys(iterate.field).forEach(function(key) {
+                                summatory += parseInt(iterate.field[key].value._text);
                             });
-                            const day = reading.recordGroup.record.dateTime._text.slice(0,2);
-                            const month = reading.recordGroup.record.dateTime._text.slice(2,4);
-                            const year = reading.recordGroup.record.dateTime._text.slice(4,8);
-                            const hour = reading.recordGroup.record.dateTime._text.slice(8,10);
-                            const minute = reading.recordGroup.record.dateTime._text.slice(10,12);
-                            const second = reading.recordGroup.record.dateTime._text.slice(12,14);
+                            const day = iterate.dateTime._text.slice(0,2);
+                            const month = iterate.dateTime._text.slice(2,4);
+                            const year = iterate.dateTime._text.slice(4,8);
+                            const hour = iterate.dateTime._text.slice(8,10);
+                            const minute = iterate.dateTime._text.slice(10,12);
+                            const second = iterate.dateTime._text.slice(12,14);
                             const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                             let utc_date = moment(tmp_date).tz(timezone);
                             
@@ -489,7 +497,7 @@ module.exports = function(Designatedmeter) {
         const API_URL = 'da79653f5a5cf0558734cee7b31bd0d7';
         let url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=es&APPID=${API_URL}`;
 
-        https.get(url, (resp) => {
+        let req = https.get(url, (resp) => {
             let data = '';
             resp.setEncoding('utf8');
             
@@ -502,6 +510,10 @@ module.exports = function(Designatedmeter) {
                 cb(null, JSON.parse(data));
             });
         });
+
+        req.on('error', (err) => {
+            cb({ status: 500, message: 'Couldnt retrieve data from weather api' });
+        })
     };
 
     Designatedmeter.remoteMethod(
