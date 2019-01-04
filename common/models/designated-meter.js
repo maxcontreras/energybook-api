@@ -40,8 +40,8 @@ const fpFormula = function(P, Q) {
 
 module.exports = function(Designatedmeter) {
 
-    Designatedmeter.consumptionSummary = function consumptionSummary(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
@@ -90,7 +90,7 @@ module.exports = function(Designatedmeter) {
                                 };
                                 socketData = JSON.stringify(socketData);
                                 Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                cb(null, 'OK');
+                                next();
                             });
                         }
                     } else if (xhr.readyState === 4 && xhr.status !== 200) {
@@ -100,21 +100,26 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if(_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     };
 
     Designatedmeter.remoteMethod(
         'consumptionSummary', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' } 
         }
     );
 
-    Designatedmeter.dailyReadings = function dailyReadings(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
@@ -170,7 +175,7 @@ module.exports = function(Designatedmeter) {
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    cb(null, 'OK');
+                                    next();
                                 }
                             });
                         } else {
@@ -183,21 +188,26 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if(_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     };
 
     Designatedmeter.remoteMethod(
         'dailyReadings', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' }
         }
     );
 
-    Designatedmeter.epimpHistory = function epimpHistory(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
@@ -205,7 +215,6 @@ module.exports = function(Designatedmeter) {
                     serviceToCall += "?var="+device+".EPimp";
                 });
                 serviceToCall += "?period=" +dates.period;
-                // console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall, false);
                 xhr.onreadystatechange = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
@@ -226,7 +235,6 @@ module.exports = function(Designatedmeter) {
                                 read.date = item.dateTime._text;
                                 meter.latestValues.epimp[key] = read;
                             });
-        
                             let company_id = meter.company().id;
                             meter.unsetAttribute("company");
                             meter.unsetAttribute("meter");
@@ -237,7 +245,7 @@ module.exports = function(Designatedmeter) {
                                 };
                                 socketData = JSON.stringify(socketData);
                                 Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                cb(null, 'OK');
+                                next();
                             });
                         }
                     } else if (xhr.readyState === 4 && xhr.status !== 200) {
@@ -247,21 +255,26 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if(_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     };
 
     Designatedmeter.remoteMethod(
         'epimpHistory', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' }
         }
     );
 
-    Designatedmeter.fpReadings = function fpReadings(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
@@ -320,7 +333,7 @@ module.exports = function(Designatedmeter) {
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    cb(null, 'OK');
+                                    next();
                                 }
                             });
                         } else {
@@ -333,21 +346,26 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if(_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     };
 
     Designatedmeter.remoteMethod(
         'fpReadings', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' }
         }
     );
 
-    Designatedmeter.monthlyReadings = function monthlyReadings(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
@@ -411,7 +429,7 @@ module.exports = function(Designatedmeter) {
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    cb(null, 'OK');
+                                    next();
                                 }
                             });
                         } else {
@@ -424,21 +442,26 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if (_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     }
 
     Designatedmeter.remoteMethod(
         'monthlyReadings', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' }
         }
     );
 
-    Designatedmeter.odometerReadings = function odometerReadings(cb) {
-        Meters.getActivesAssigned(function(err, meters) {
+    Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
+        Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
                 // console.log('serviceToCall:', serviceToCall);
@@ -468,7 +491,7 @@ module.exports = function(Designatedmeter) {
                                 };
                                 socketData = JSON.stringify(socketData);
                                 Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                cb(null, 'OK');
+                                next();
                             });
                         } else {
                             next();
@@ -480,15 +503,20 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.send();
             }, function(_err) {
-                if(_err) console.log('error reading', _err);
-                cb({ status: 500, message: 'Error al leer medidores' }, null);
+                if(_err) {
+                    console.log('error reading', _err);
+                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                }
+                cb(null, 'OK');
             });
         });
     };
 
     Designatedmeter.remoteMethod(
         'odometerReadings', {
-            accepts: [],
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''}
+            ],
             returns: { arg: 'response', type: 'string' }
         }
     );
