@@ -106,7 +106,7 @@ module.exports = function(Meter) {
         http: {path: '/unassignedMeters', verb: 'get'}
     });
 
-    Meter.getActivesAssigned = function getActivesAssigned(cb) {
+    Meter.getActivesAssigned = function getActivesAssigned(company_id, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         DesignatedMeter.find({
             include: [
@@ -118,7 +118,8 @@ module.exports = function(Meter) {
                 }
             ],
             where: {
-                active: 1
+                active: 1,
+                company_id
             },
         }, function(err, meters){
             if(err) cb({status: 400, message: "Error al traer los medidores activos"}, null);
@@ -129,6 +130,9 @@ module.exports = function(Meter) {
     };
 
     Meter.remoteMethod('getActivesAssigned', {
+        accepts: [
+            { arg: 'company_id', type: 'string',  required: false, default: '' }
+        ],
         returns: { arg: 'meters', type: 'object' }
     });
 
