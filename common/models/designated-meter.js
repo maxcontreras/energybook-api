@@ -17,7 +17,6 @@ const DEFAULT_DAYS = 1;
 const CHARGE_FACTOR = Constants.CFE.values.charge_factor;
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-const xhr = new XMLHttpRequest();
 
 const OPTIONS_XML2JS  = {
     compact: true,
@@ -41,16 +40,18 @@ const fpFormula = function(P, Q) {
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
+        let xhr = new XMLHttpRequest();
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
                 Object.keys(meter.devices).forEach(function(key) {
                     serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
                 });
                 serviceToCall += "?period="+dates.period;
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         if(!meter.latestValues.consumption){
@@ -98,6 +99,14 @@ module.exports = function(Designatedmeter) {
                         next();
                     }
                 };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
+                };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
@@ -120,7 +129,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            let xhr = new XMLHttpRequest();
+            async.eachSeries(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
@@ -129,8 +139,9 @@ module.exports = function(Designatedmeter) {
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('service to call:', serviceToCall);
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         let summatory = 0;
@@ -186,6 +197,14 @@ module.exports = function(Designatedmeter) {
                         next();
                     }
                 };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
+                };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
@@ -208,15 +227,17 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            let xhr = new XMLHttpRequest();
+            async.eachSeries(meters, function(meter, next){
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
                 meter.devices.map(device => {
                     serviceToCall += "?var="+device+".EPimp";
                 });
                 serviceToCall += "?period=" +dates.period;
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         if (reading.recordGroup && reading.recordGroup.record) {
@@ -253,6 +274,14 @@ module.exports = function(Designatedmeter) {
                         next();
                     }
                 };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
+                };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
@@ -275,7 +304,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            let xhr = new XMLHttpRequest();
+            async.eachSeries(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
                 meter.devices.map(device => {
@@ -284,8 +314,9 @@ module.exports = function(Designatedmeter) {
                 serviceToCall += "?period=" + dates.period;
     
                 // console.log('service to call:', serviceToCall);
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         let P = 0;
@@ -344,6 +375,14 @@ module.exports = function(Designatedmeter) {
                         next();
                     }
                 };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
+                };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
@@ -366,7 +405,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            let xhr = new XMLHttpRequest();
+            async.eachSeries(meters, function(meter, next){
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
@@ -375,8 +415,9 @@ module.exports = function(Designatedmeter) {
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('serviceToCall:', serviceToCall);
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         let summatory = 0;
@@ -440,6 +481,14 @@ module.exports = function(Designatedmeter) {
                         next();
                     }
                 };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
+                };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
@@ -462,12 +511,13 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            let xhr = new XMLHttpRequest();
+            async.eachSeries(meters, function(meter, next){
                 let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
                 // console.log('serviceToCall:', serviceToCall);
-    
-                xhr.open('GET', serviceToCall, false);
-                xhr.onreadystatechange = function(){
+                xhr.open('GET', serviceToCall);
+                xhr.timeout = 4000;
+                xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                         let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
@@ -500,6 +550,14 @@ module.exports = function(Designatedmeter) {
                         var reading = {};
                         next();
                     }
+                };
+                xhr.onerror = function() {
+                    console.log("Something went wrong");
+                    next();
+                };
+                xhr.ontimeout = function () {
+                    console.error("The request timed out");
+                    next();
                 };
                 xhr.send();
             }, function(_err) {
