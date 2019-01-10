@@ -40,17 +40,22 @@ const fpFormula = function(P, Q) {
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
-        let xhr = new XMLHttpRequest();
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
                 Object.keys(meter.devices).forEach(function(key) {
                     serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
                 });
                 serviceToCall += "?period="+dates.period;
+
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -101,17 +106,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });
@@ -129,8 +134,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            let xhr = new XMLHttpRequest();
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
@@ -140,7 +145,11 @@ module.exports = function(Designatedmeter) {
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('service to call:', serviceToCall);
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -199,17 +208,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });
@@ -227,8 +236,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            let xhr = new XMLHttpRequest();
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
                 meter.devices.map(device => {
@@ -236,7 +245,11 @@ module.exports = function(Designatedmeter) {
                 });
                 serviceToCall += "?period=" +dates.period;
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -276,17 +289,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });
@@ -304,8 +317,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            let xhr = new XMLHttpRequest();
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
                 meter.devices.map(device => {
@@ -315,7 +328,11 @@ module.exports = function(Designatedmeter) {
     
                 // console.log('service to call:', serviceToCall);
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -377,17 +394,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });
@@ -405,8 +422,8 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            let xhr = new XMLHttpRequest();
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
@@ -416,7 +433,11 @@ module.exports = function(Designatedmeter) {
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -483,17 +504,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });
@@ -511,12 +532,16 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            let xhr = new XMLHttpRequest();
             async.eachSeries(meters, function(meter, next){
+                let xhr = new XMLHttpRequest();
                 let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
                 // console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
-                xhr.timeout = 4000;
+                setTimeout(() => {
+                    if (xhr.readyState < 4) {
+                        xhr.abort();
+                    }
+                }, 4000);
                 xhr.onload = function(){
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -553,17 +578,17 @@ module.exports = function(Designatedmeter) {
                 };
                 xhr.onerror = function() {
                     console.log("Something went wrong");
-                    next();
+                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    else next();
                 };
-                xhr.ontimeout = function () {
+                xhr.onabort = function () {
                     console.error("The request timed out");
-                    next();
                 };
                 xhr.send();
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
-                    cb({ status: 500, message: 'Error al leer medidores' }, null);
+                    cb(_err, null);
                 }
                 cb(null, 'OK');
             });

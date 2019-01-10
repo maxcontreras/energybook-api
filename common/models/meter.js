@@ -273,6 +273,8 @@ module.exports = function(Meter) {
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
+                    let xhr = new XMLHttpRequest();
+
                     // Dp values
                     let values = [];
                     var dates = EDS.dateFilterSetup(filter);
@@ -288,8 +290,13 @@ module.exports = function(Meter) {
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
-                    xhr.open('GET', service, false);
-                    xhr.onreadystatechange = function(){
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 4) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             let dp = {};
@@ -323,6 +330,13 @@ module.exports = function(Meter) {
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
+                    };
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on dpReadings");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("dpReadings request timed out");
                     };
                     xhr.send();
                 }
@@ -364,14 +378,21 @@ module.exports = function(Meter) {
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
+                    let xhr = new XMLHttpRequest();
+
                     // Epimp values
                     let values = [];
                     var dates = EDS.dateFilterSetup(filter);
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
-                    xhr.open('GET', service, false);
-                    xhr.onreadystatechange = function(){
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 4) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             let epimp = {};
@@ -404,6 +425,13 @@ module.exports = function(Meter) {
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
+                    };
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on epimpReadings");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("epimpReadings request timed out");
                     };
                     xhr.send();
                 }
@@ -445,6 +473,8 @@ module.exports = function(Meter) {
             }, function(err, meter) {
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if (meter) {
+                    let xhr = new XMLHttpRequest();
+
                     // TODO: calculate costs 
                     let dates = EDS.dateFilterSetup(filter);
                     // Set period fixed to 1 hour
@@ -458,9 +488,13 @@ module.exports = function(Meter) {
                         });
                     }
                     service += "?period=" + dates.period;
-                    //console.log("Service to call ", service);
-                    xhr.open('GET', service, false);
-                    xhr.onreadystatechange = function() {
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 4) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             let values = [];
@@ -524,6 +558,13 @@ module.exports = function(Meter) {
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
+                    };
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on costs");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("costs request timed out");
                     };
                     xhr.send();
                 }
