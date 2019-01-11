@@ -52,7 +52,7 @@ module.exports = function(Designatedmeter) {
 
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);
@@ -146,7 +146,7 @@ module.exports = function(Designatedmeter) {
                 // console.log('service to call:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);
@@ -246,7 +246,7 @@ module.exports = function(Designatedmeter) {
                 serviceToCall += "?period=" +dates.period;
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);
@@ -329,7 +329,7 @@ module.exports = function(Designatedmeter) {
                 // console.log('service to call:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);
@@ -434,7 +434,7 @@ module.exports = function(Designatedmeter) {
                 // console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);
@@ -538,7 +538,7 @@ module.exports = function(Designatedmeter) {
                 // console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
-                    if (xhr.readyState < 4) {
+                    if (xhr.readyState < 3) {
                         xhr.abort();
                     }
                 }, 4000);

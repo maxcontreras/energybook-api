@@ -292,7 +292,7 @@ module.exports = function(Meter) {
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
@@ -388,7 +388,7 @@ module.exports = function(Meter) {
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
@@ -490,7 +490,7 @@ module.exports = function(Meter) {
                     service += "?period=" + dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
