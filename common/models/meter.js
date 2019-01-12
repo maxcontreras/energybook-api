@@ -323,10 +323,8 @@ module.exports = function(Meter) {
                                     dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(dp);
                                 });
-                                cb(null, values);
-                            } else {
-                                cb(true, null);
                             }
+                            cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -418,10 +416,8 @@ module.exports = function(Meter) {
                                     epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(epimp);
                                 });
-                                cb(null, values);
-                            } else {
-                                cb(true, null);
                             }
+                            cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
