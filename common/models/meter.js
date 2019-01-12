@@ -506,6 +506,12 @@ module.exports = function(Meter) {
                                 let prevDate = null;
                                 // Keeps track of the costs per day
                                 let dailyCosts = 0;
+                                // Keeps track of each cost per day
+                                let rateCosts = {
+                                    'base': 0,
+                                    'middle': 0,
+                                    'peak': 0
+                                }
                                 // Saves values grouped by day interval
                                 let dailyValues = [];
                                 values = records.map(item => {
@@ -540,7 +546,7 @@ module.exports = function(Meter) {
 
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {
-                                        iterable.push(item.field)
+                                        iterable.push(item.field);
                                     } else {
                                         iterable = item.field;
                                     }
@@ -556,13 +562,23 @@ module.exports = function(Meter) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
                                                 read.cost = dailyCosts.toFixed(2);
                                                 read.rate = "diario";
+                                                rateCosts.base = rateCosts.base.toFixed(2);
+                                                rateCosts.middle = rateCosts.middle.toFixed(2);
+                                                rateCosts.peak = rateCosts.peak.toFixed(2);
+                                                read.rateCosts = rateCosts;
                                                 dailyValues.push(read);
                                             }
                                             prevDate = date;
                                             prevDay = date.dayOfYear();
                                             dailyCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
                                         }
                                         dailyCosts += sum * rate;
+                                        rateCosts[rate_type] += sum * rate;
                                         return null;
                                     } else {
                                         // Result object
@@ -578,6 +594,10 @@ module.exports = function(Meter) {
                                         read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
                                         read.cost = dailyCosts.toFixed(2);
                                         read.rate = "diario";
+                                        rateCosts.base = rateCosts.base.toFixed(2);
+                                        rateCosts.middle = rateCosts.middle.toFixed(2);
+                                        rateCosts.peak = rateCosts.peak.toFixed(2);
+                                        read.rateCosts = rateCosts;
                                         dailyValues.push(read);
                                     }
                                     // If interval is daily, replace values with dailyValues
