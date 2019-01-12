@@ -158,7 +158,6 @@ module.exports = function(Designatedmeter) {
                             reading.recordGroup.record.field.map(item=> {
                                 summatory += parseFloat(item.value._text);
                             });
-    
                             let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
                             let consumption = summatory
                             let distributionCharge = distribution * Constants.CFE.values.distribution_price;
@@ -169,34 +168,69 @@ module.exports = function(Designatedmeter) {
                             meter.latestValues.lastUpdated = new Date();
                             if(!meter.latestValues.distribution){
                                 meter.latestValues.distribution = {};
-                                meter.latestValues.distribution.daily = distribution;
-                                meter.latestValues.distribution.charge = distributionCharge;
-                            } else {
-                                meter.latestValues.distribution.daily = distribution;
-                                meter.latestValues.distribution.charge = distributionCharge;
                             }
+                            meter.latestValues.distribution.daily = distribution;
+                            meter.latestValues.distribution.charge = distributionCharge;
     
                             if(!meter.latestValues.consumption){
                                 meter.latestValues.consumption = {};
-                                meter.latestValues.consumption.daily = consumption;
-                            } else {
-                                meter.latestValues.consumption.daily = consumption;
                             }
+                            meter.latestValues.consumption.daily = consumption;
+
                             // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
                             let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                if(err) next(err, null);
-                                else {
-                                    let socketData = {
-                                        socketEvent: 'dailyReading',
-                                        data: dsgMeter.latestValues
-                                    };
-                                    socketData = JSON.stringify(socketData);
-                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    next();
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, (err, res) => {
+                                let maxDp = 0;
+                                res.forEach((dpReading) => {
+                                    const day = dpReading.date.slice(0,2);
+                                    const month = dpReading.date.slice(2,4);
+                                    const year = dpReading.date.slice(4,8);
+                                    const hour = dpReading.date.slice(8,10);
+                                    const minute = dpReading.date.slice(10,12);
+                                    const second = dpReading.date.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
+                                    let date = moment(tmp_date);
+                                    
+                                    // get CFE period
+                                    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
+                                    let curr_period = 0;
+                                    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
+                                        curr_period = 1;
+                                    }
+
+                                    // get day of the week
+                                    let curr_day = "monday-friday";
+                                    if (date.day() === 0) {
+                                        curr_day = "sunday";
+                                    } else if (date.day() === 6) {
+                                        curr_day = "saturday";
+                                    }
+
+                                    // obtain corresponding rate
+                                    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
+                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                        maxDp = parseFloat(dpReading.value);
+                                    }
+                                });
+                                if(!meter.latestValues.capacity){
+                                    meter.latestValues.capacity = {};
                                 }
+                                meter.latestValues.capacity.daily = Math.min(maxDp, distribution);
+
+                                meter.unsetAttribute("company");
+                                meter.unsetAttribute("meter");
+                                meter.save(function(err, dsgMeter){
+                                    if(err) next(err, null);
+                                    else {
+                                        let socketData = {
+                                            socketEvent: 'dailyReading',
+                                            data: dsgMeter.latestValues
+                                        };
+                                        socketData = JSON.stringify(socketData);
+                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                        next();
+                                    }
+                                });
                             });
                         } else {
                             next();

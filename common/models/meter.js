@@ -288,8 +288,17 @@ module.exports = function(Meter) {
                         dates.period = 900;
                     }
 
-                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    if (device) {
+                        service += "?var=" +device+ ".DP";
+                    } else {
+                        Object.keys(meter.devices).forEach((key, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ meter.devices[key] + ".DP";
+                            }
+                        });
+                    }
+                    service += "?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -309,7 +318,16 @@ module.exports = function(Meter) {
                                 }
                                 iterable.map(item => {
                                     dp = {};
-                                    dp.value = item.field[0].value._text / 1000;
+                                    let tmp_values = [];
+                                    if (!Array.isArray(item.field)) {
+                                        tmp_values.push(item.field);
+                                    } else {
+                                        tmp_values = item.field;
+                                    }
+                                    dp.value = tmp_values.reduce((accumulator, currentValue) => {
+                                        return accumulator + parseFloat(currentValue.value._text);
+                                    }, 0);
+                                    dp.value /= 1000;
                                     dp.value = dp.value.toFixed(2);
                                     dp.value = (dp.value < 0)? 0:dp.value;
                                     const day = item.dateTime._text.slice(0,2);
@@ -346,7 +364,7 @@ module.exports = function(Meter) {
         'getDpReadingsByFilter', {
             accepts: [
                 { arg: 'id', type: 'string' },
-                { arg: 'device', type: 'string' },
+                { arg: 'device', type: 'string', required: false, default: '' },
                 { arg: 'filter', type: 'number' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
