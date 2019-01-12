@@ -450,7 +450,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, cb) {
+    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, interval, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
@@ -505,6 +505,13 @@ module.exports = function(Meter) {
                                 } else {
                                     records = reading.recordGroup.record;
                                 }
+                                // Remembers the previous day
+                                let prevDay = null;
+                                let prevDate = null;
+                                // Keeps track of the costs per day
+                                let dailyCosts = 0;
+                                // Saves values grouped by day interval
+                                let dailyValues = [];
                                 values = records.map(item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
@@ -546,13 +553,40 @@ module.exports = function(Meter) {
                                         if (!medition) continue;
                                         sum += parseFloat(medition.value._text);
                                     }
-                                    
-                                    // Result object
-                                    read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
-                                    read.cost = (sum*rate).toFixed(2);
-                                    read.rate = rate_type;
-                                    return read;
+                                    // If interval is per day
+                                    if (interval === 1) {
+                                        if (prevDay !== date.dayOfYear()) {
+                                            if (prevDay != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.cost = dailyCosts.toFixed(2);
+                                                read.rate = "diario";
+                                                dailyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevDay = date.dayOfYear();
+                                            dailyCosts = 0;
+                                        }
+                                        dailyCosts += sum * rate;
+                                        return null;
+                                    } else {
+                                        // Result object
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.cost = (sum*rate).toFixed(2);
+                                        read.rate = rate_type;
+                                        return read;
+                                    }
                                 });
+                                if (interval === 1) {
+                                    if (prevDay != null) {
+                                        let read = {};
+                                        read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.cost = dailyCosts.toFixed(2);
+                                        read.rate = "diario";
+                                        dailyValues.push(read);
+                                    }
+                                    // If interval is daily, replace values with dailyValues
+                                    values = dailyValues;
+                                }
                             }
                             cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
@@ -577,7 +611,8 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
-                { arg: 'filter', type: 'number' }
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' }
             ],
             returns: { arg: 'costs', type: 'array', root: true }
         }
