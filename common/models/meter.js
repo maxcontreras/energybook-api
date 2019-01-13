@@ -23,7 +23,7 @@ const OPTIONS_JS2XML = {
 };
 
 moment.tz.setDefault("America/Mexico_City");
-var timezone = 'America/Mexico_City';
+const timezone = 'America/Mexico_City';
 
 module.exports = function(Meter) {
 
@@ -541,26 +541,11 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    let date = moment(tmp_date).tz(timezone);
-                                    
-                                    // get CFE period
-                                    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
-                                    let curr_period = 0;
-                                    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
-                                        curr_period = 1;
-                                    }
 
-                                    // get day of the week
-                                    let curr_day = "monday-friday";
-                                    if (date.day() === 0) {
-                                        curr_day = "sunday";
-                                    } else if (date.day() === 6) {
-                                        curr_day = "saturday";
-                                    }
-
-                                    // obtain corresponding rate
-                                    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
-                                    const rate = Constants.CFE.values.consumption_price[rate_type];
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate = CFE_rates.rate;
+                                    const rate_type = CFE_rates.rate_type;
+                                    let date = CFE_rates.date;
 
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {

@@ -30,7 +30,7 @@ const OPTIONS_JS2XML = {
 };
 
 moment.tz.setDefault("America/Mexico_City");
-var timezone = 'America/Mexico_City';
+const timezone = 'America/Mexico_City';
 
 const fpFormula = function(P, Q) {
     return P/Math.sqrt(Math.pow(P, 2) + Math.pow(Q, 2));
@@ -189,25 +189,10 @@ module.exports = function(Designatedmeter) {
                                     const minute = dpReading.date.slice(10,12);
                                     const second = dpReading.date.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
-                                    let date = moment(tmp_date);
                                     
-                                    // get CFE period
-                                    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
-                                    let curr_period = 0;
-                                    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
-                                        curr_period = 1;
-                                    }
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate_type = CFE_rates.rate_type;
 
-                                    // get day of the week
-                                    let curr_day = "monday-friday";
-                                    if (date.day() === 0) {
-                                        curr_day = "sunday";
-                                    } else if (date.day() === 6) {
-                                        curr_day = "saturday";
-                                    }
-
-                                    // obtain corresponding rate
-                                    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
                                     if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
                                         maxDp = parseFloat(dpReading.value);
                                     }
@@ -465,7 +450,7 @@ module.exports = function(Designatedmeter) {
                     serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
-                // console.log('serviceToCall:', serviceToCall);
+                console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
                     if (xhr.readyState < 3) {

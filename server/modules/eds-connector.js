@@ -26,6 +26,7 @@ const OPTIONS_JS2XML = {
     compact: true,
     fullTagEmptyElement:false
 };
+const timezone = 'America/Mexico_City';
 
 var performEDSrequest = function performEDSrequest(service, next){
     // Example URL: /services/user/devices.xml
@@ -219,7 +220,8 @@ var dateFilterSetup = function dateFilterSetup(filter){
         case Constants.Meters.filters.monthAVG:
             date.begin = parseDate(moment().startOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.end = parseDate(moment().endOf('month').add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
-            date.period = 2592000;
+            const daysInMonth = moment().daysInMonth();
+            date.period = daysInMonth*86400;
             date.day = moment().date();
             return date;
         default:
@@ -230,6 +232,35 @@ var dateFilterSetup = function dateFilterSetup(filter){
     }
 }
 
+const getCFERate = function(ISOdate) {
+    let date = moment(ISOdate).tz(timezone);
+
+    // get CFE period
+    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
+    let curr_period = 0;
+    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
+        curr_period = 1;
+    }
+
+    // get day of the week
+    let curr_day = "monday-friday";
+    if (date.day() === 0) {
+        curr_day = "sunday";
+    } else if (date.day() === 6) {
+        curr_day = "saturday";
+    }
+
+    // obtain corresponding rate
+    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
+    const rate = Constants.CFE.values.consumption_price[rate_type];
+    return {
+        rate,
+        rate_type,
+        date
+    }
+}
+
+
 module.exports.parseDate = parseDate;
 module.exports.performEDSrequest = performEDSrequest;
 module.exports.getDeviceInfo = getDeviceInfo;
@@ -238,3 +269,4 @@ module.exports.panelReadings = panelReadings;
 module.exports.readDemand = readDemand;
 module.exports.readEPimpHistory = readEPimpHistory;
 module.exports.dateFilterSetup = dateFilterSetup;
+module.exports.getCFERate = getCFERate;
