@@ -179,6 +179,7 @@ module.exports = function(Designatedmeter) {
 
                             // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
                             let company_id = meter.company().id;
+
                             Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
@@ -200,7 +201,7 @@ module.exports = function(Designatedmeter) {
                                 if(!meter.latestValues.capacity){
                                     meter.latestValues.capacity = {};
                                 }
-                                meter.latestValues.capacity.daily = Math.min(maxDp, distribution);
+                                meter.latestValues.capacity.daily = Math.min(maxDp, parseFloat(distribution));
 
                                 meter.unsetAttribute("company");
                                 meter.unsetAttribute("meter");
@@ -450,7 +451,6 @@ module.exports = function(Designatedmeter) {
                     serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
-                console.log('serviceToCall:', serviceToCall);
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
                     if (xhr.readyState < 3) {
@@ -478,40 +478,61 @@ module.exports = function(Designatedmeter) {
                             const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                             let utc_date = moment(tmp_date).tz(timezone);
                             
-                            let distribution = ( parseInt(summatory) / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
                             let consumption = parseInt(summatory);
+                            let distribution = ( consumption / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
+                            
                             distribution = distribution.toFixed(2);
                             consumption = consumption.toFixed(2);
     
                             meter.latestValues.lastUpdated = utc_date.format();
                             if(!meter.latestValues.distribution){
                                 meter.latestValues.distribution = {};
-                                meter.latestValues.distribution.monthly = distribution;
-                            } else {
-                                meter.latestValues.distribution.monthly = distribution;
                             }
+                            meter.latestValues.distribution.monthly = distribution;
     
                             if(!meter.latestValues.consumption){
                                 meter.latestValues.consumption = {};
-                                meter.latestValues.consumption.monthly = consumption;
-                            } else {
-                                meter.latestValues.consumption.monthly = consumption;
                             }
+                            meter.latestValues.consumption.monthly = consumption;
+
                             // console.log('monthly dist: '+ meter.device_name + ': value => ' + meter.latestValues.distribution);
                             let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                if(err) next(err, null);
-                                else {
-                                    let socketData = {
-                                        socketEvent: 'monthlyReading',
-                                        data: meter.latestValues
-                                    };
-                                    socketData = JSON.stringify(socketData);
-                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    next();
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, (err, res) => {
+                                let maxDp = 0;
+                                res.forEach((dpReading) => {
+                                    const day = dpReading.date.slice(0,2);
+                                    const month = dpReading.date.slice(2,4);
+                                    const year = dpReading.date.slice(4,8);
+                                    const hour = dpReading.date.slice(8,10);
+                                    const minute = dpReading.date.slice(10,12);
+                                    const second = dpReading.date.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
+                                    
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate_type = CFE_rates.rate_type;
+
+                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                        maxDp = parseFloat(dpReading.value);
+                                    }
+                                });
+                                if(!meter.latestValues.capacity){
+                                    meter.latestValues.capacity = {};
                                 }
+                                meter.latestValues.capacity.monthly = Math.min(maxDp, parseFloat(distribution));
+                                meter.unsetAttribute("company");
+                                meter.unsetAttribute("meter");
+                                meter.save(function(err, dsgMeter){
+                                    if(err) next(err, null);
+                                    else {
+                                        let socketData = {
+                                            socketEvent: 'monthlyReading',
+                                            data: meter.latestValues
+                                        };
+                                        socketData = JSON.stringify(socketData);
+                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                        next();
+                                    }
+                                });
                             });
                         } else {
                             next();
