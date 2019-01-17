@@ -23,7 +23,7 @@ const OPTIONS_JS2XML = {
 };
 
 moment.tz.setDefault("America/Mexico_City");
-var timezone = 'America/Mexico_City';
+const timezone = 'America/Mexico_City';
 
 module.exports = function(Meter) {
 
@@ -288,11 +288,20 @@ module.exports = function(Meter) {
                         dates.period = 900;
                     }
 
-                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    if (device) {
+                        service += "?var=" +device+ ".DP";
+                    } else {
+                        Object.keys(meter.devices).forEach((key, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ meter.devices[key] + ".DP";
+                            }
+                        });
+                    }
+                    service += "?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
@@ -309,7 +318,16 @@ module.exports = function(Meter) {
                                 }
                                 iterable.map(item => {
                                     dp = {};
-                                    dp.value = item.field[0].value._text / 1000;
+                                    let tmp_values = [];
+                                    if (!Array.isArray(item.field)) {
+                                        tmp_values.push(item.field);
+                                    } else {
+                                        tmp_values = item.field;
+                                    }
+                                    dp.value = tmp_values.reduce((accumulator, currentValue) => {
+                                        return accumulator + parseFloat(currentValue.value._text);
+                                    }, 0);
+                                    dp.value /= 1000;
                                     dp.value = dp.value.toFixed(2);
                                     dp.value = (dp.value < 0)? 0:dp.value;
                                     const day = item.dateTime._text.slice(0,2);
@@ -323,10 +341,8 @@ module.exports = function(Meter) {
                                     dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(dp);
                                 });
-                                cb(null, values);
-                            } else {
-                                cb(true, null);
                             }
+                            cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -348,7 +364,7 @@ module.exports = function(Meter) {
         'getDpReadingsByFilter', {
             accepts: [
                 { arg: 'id', type: 'string' },
-                { arg: 'device', type: 'string' },
+                { arg: 'device', type: 'string', required: false, default: '' },
                 { arg: 'filter', type: 'number' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
@@ -388,7 +404,7 @@ module.exports = function(Meter) {
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
@@ -418,10 +434,8 @@ module.exports = function(Meter) {
                                     epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(epimp);
                                 });
-                                cb(null, values);
-                            } else {
-                                cb(true, null);
                             }
+                            cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
@@ -450,7 +464,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, cb) {
+    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, interval, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
@@ -490,7 +504,7 @@ module.exports = function(Meter) {
                     service += "?period=" + dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
-                        if (xhr.readyState < 4) {
+                        if (xhr.readyState < 3) {
                             xhr.abort();
                         }
                     }, 4000);
@@ -505,6 +519,19 @@ module.exports = function(Meter) {
                                 } else {
                                     records = reading.recordGroup.record;
                                 }
+                                // Remembers the previous day
+                                let prevDay = null;
+                                let prevDate = null;
+                                // Keeps track of the costs per day
+                                let dailyCosts = 0;
+                                // Keeps track of each cost per day
+                                let rateCosts = {
+                                    'base': 0,
+                                    'middle': 0,
+                                    'peak': 0
+                                }
+                                // Saves values grouped by day interval
+                                let dailyValues = [];
                                 values = records.map(item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
@@ -514,30 +541,15 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    let date = moment(tmp_date).tz(timezone);
-                                    
-                                    // get CFE period
-                                    const period2 = {start: Constants.CFE.datePeriods[1].utc_startDate, end: Constants.CFE.datePeriods[1].utc_endDate};
-                                    let curr_period = 0;
-                                    if (date.isBetween(moment(period2.start, 'DD/MM/YYYY').tz(timezone), moment(period2.end, 'DD/MM/YYYY').tz(timezone), "days", "[]")) {
-                                        curr_period = 1;
-                                    }
 
-                                    // get day of the week
-                                    let curr_day = "monday-friday";
-                                    if (date.day() === 0) {
-                                        curr_day = "sunday";
-                                    } else if (date.day() === 6) {
-                                        curr_day = "saturday";
-                                    }
-
-                                    // obtain corresponding rate
-                                    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
-                                    const rate = Constants.CFE.values.consumption_price[rate_type];
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate = CFE_rates.rate;
+                                    const rate_type = CFE_rates.rate_type;
+                                    let date = CFE_rates.date;
 
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {
-                                        iterable.push(item.field)
+                                        iterable.push(item.field);
                                     } else {
                                         iterable = item.field;
                                     }
@@ -546,13 +558,54 @@ module.exports = function(Meter) {
                                         if (!medition) continue;
                                         sum += parseFloat(medition.value._text);
                                     }
-                                    
-                                    // Result object
-                                    read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
-                                    read.cost = (sum*rate).toFixed(2);
-                                    read.rate = rate_type;
-                                    return read;
+                                    // If interval is per day
+                                    if (interval === 1) {
+                                        if (prevDay !== date.dayOfYear()) {
+                                            if (prevDay != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.cost = dailyCosts.toFixed(2);
+                                                read.rate = "diario";
+                                                rateCosts.base = rateCosts.base.toFixed(2);
+                                                rateCosts.middle = rateCosts.middle.toFixed(2);
+                                                rateCosts.peak = rateCosts.peak.toFixed(2);
+                                                read.rateCosts = rateCosts;
+                                                dailyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevDay = date.dayOfYear();
+                                            dailyCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
+                                        }
+                                        dailyCosts += sum * rate;
+                                        rateCosts[rate_type] += sum * rate;
+                                        return null;
+                                    } else {
+                                        // Result object
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.cost = (sum*rate).toFixed(2);
+                                        read.rate = rate_type;
+                                        return read;
+                                    }
                                 });
+                                if (interval === 1) {
+                                    if (prevDay != null) {
+                                        let read = {};
+                                        read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.cost = dailyCosts.toFixed(2);
+                                        read.rate = "diario";
+                                        rateCosts.base = rateCosts.base.toFixed(2);
+                                        rateCosts.middle = rateCosts.middle.toFixed(2);
+                                        rateCosts.peak = rateCosts.peak.toFixed(2);
+                                        read.rateCosts = rateCosts;
+                                        dailyValues.push(read);
+                                    }
+                                    // If interval is daily, replace values with dailyValues
+                                    values = dailyValues;
+                                }
                             }
                             cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
@@ -577,7 +630,8 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
-                { arg: 'filter', type: 'number' }
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' }
             ],
             returns: { arg: 'costs', type: 'array', root: true }
         }
