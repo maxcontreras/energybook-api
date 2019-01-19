@@ -371,7 +371,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, cb){
+    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, interval, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -399,6 +399,10 @@ module.exports = function(Meter) {
                     // Epimp values
                     let values = [];
                     var dates = EDS.dateFilterSetup(filter);
+
+                    if (interval !== -1) {
+                        dates.period = interval;
+                    }
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                                     +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
@@ -458,7 +462,8 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
-                { arg: 'filter', type: 'number' }
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
         }
