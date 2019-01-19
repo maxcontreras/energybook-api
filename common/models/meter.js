@@ -250,7 +250,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, cb) {
+    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, custom_dates, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -277,7 +277,8 @@ module.exports = function(Meter) {
 
                     // Dp values
                     let values = [];
-                    var dates = EDS.dateFilterSetup(filter);
+
+                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
                     
                     // Check period of the graph
                     if (filter === Constants.Meters.filters.today || 
@@ -365,13 +366,14 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string', required: false, default: '' },
-                { arg: 'filter', type: 'number' }
+                { arg: 'filter', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
         }
     );
 
-    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, interval, cb){
+    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, interval, custom_dates, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -398,7 +400,7 @@ module.exports = function(Meter) {
 
                     // Epimp values
                     let values = [];
-                    var dates = EDS.dateFilterSetup(filter);
+                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
 
                     if (interval !== -1) {
                         dates.period = interval;
@@ -463,7 +465,8 @@ module.exports = function(Meter) {
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
                 { arg: 'filter', type: 'number' },
-                { arg: 'interval', type: 'number' }
+                { arg: 'interval', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
             ],
             returns: { arg: 'values', type: 'array', root: true }
         }
