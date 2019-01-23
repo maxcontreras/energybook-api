@@ -42,7 +42,7 @@
             "week": 2,
             "month": 3,
             "year": 4,
-            "custom": 5,
+            "custom": -1,
             "latest": 6,
             "dayAVG": 7,
             "monthAVG": 8

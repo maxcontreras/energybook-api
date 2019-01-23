@@ -171,7 +171,7 @@ var parseDate = function(date) {
     return newDate[2]+newDate[1]+newDate[0]+newDate[3]+newDate[4]+newDate[5];
 }
 
-var dateFilterSetup = function dateFilterSetup(filter){
+var dateFilterSetup = function dateFilterSetup(filter, dates = {}){
     // TODO: Investigar que putas con la agrupacion por periodo y agregarlo en obj date.
     let date = [];
     switch (filter) {
@@ -202,8 +202,8 @@ var dateFilterSetup = function dateFilterSetup(filter){
             return date;
         // TODO: Update the following when the time comes
         case Constants.Meters.filters.custom:
-            date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
-            date.end = parseDate(moment().endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.begin = parseDate(moment(dates.from).startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
+            date.end = parseDate(moment(dates.until).endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.period = 900;
             return date;
         case Constants.Meters.filters.latest:
