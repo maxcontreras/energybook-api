@@ -183,18 +183,7 @@ module.exports = function(Designatedmeter) {
                             Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
-                                    const day = dpReading.date.slice(0,2);
-                                    const month = dpReading.date.slice(2,4);
-                                    const year = dpReading.date.slice(4,8);
-                                    const hour = dpReading.date.slice(8,10);
-                                    const minute = dpReading.date.slice(10,12);
-                                    const second = dpReading.date.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
-                                    
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
-                                    const rate_type = CFE_rates.rate_type;
-
-                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
                                         maxDp = parseFloat(dpReading.value);
                                     }
                                 });
@@ -500,18 +489,7 @@ module.exports = function(Designatedmeter) {
                             Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
-                                    const day = dpReading.date.slice(0,2);
-                                    const month = dpReading.date.slice(2,4);
-                                    const year = dpReading.date.slice(4,8);
-                                    const hour = dpReading.date.slice(8,10);
-                                    const minute = dpReading.date.slice(10,12);
-                                    const second = dpReading.date.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
-                                    
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
-                                    const rate_type = CFE_rates.rate_type;
-
-                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
                                         maxDp = parseFloat(dpReading.value);
                                     }
                                 });
