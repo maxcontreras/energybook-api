@@ -406,8 +406,17 @@ module.exports = function(Meter) {
                         dates.period = interval;
                     }
 
-                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    let service = meter.hostname+API_PREFIX+"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
+                    if (device) {
+                        service += "?var=" +device+ ".EPimp";
+                    } else {
+                        Object.keys(meter.devices).forEach((key, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ meter.devices[key] + ".EPimp";
+                            }
+                        });
+                    }
+                    service += "?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -435,8 +444,16 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                                     let utc_date = moment(tmp_date).tz(timezone);
-                                    epimp.value = item.field[1].value._text;
-                                    epimp.value = (epimp.value < 0)? 0:epimp.value;
+                                    let tmp_values = [];
+                                    if (!Array.isArray(item.field)) {
+                                        tmp_values.push(item.field);
+                                    } else {
+                                        tmp_values = item.field;
+                                    }
+                                    epimp.value = tmp_values.reduce((accumulator, currentValue) => {
+                                        return accumulator + parseFloat(currentValue.value._text);
+                                    }, 0);
+                                    epimp.value = (epimp.value < 0)? 0:epimp.value.toFixed(2);
                                     epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(epimp);
                                 });
