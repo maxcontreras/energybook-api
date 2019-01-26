@@ -338,6 +338,12 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate_type = CFE_rates.rate_type;
+
+                                    dp.isPeak = rate_type === 'peak';
+
                                     let utc_date = moment(tmp_date).tz(timezone);
                                     dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(dp);
