@@ -180,7 +180,7 @@ module.exports = function(Designatedmeter) {
                             // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
                             let company_id = meter.company().id;
 
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, (err, res) => {
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
                                     const day = dpReading.date.slice(0,2);
@@ -497,7 +497,7 @@ module.exports = function(Designatedmeter) {
 
                             // console.log('monthly dist: '+ meter.device_name + ': value => ' + meter.latestValues.distribution);
                             let company_id = meter.company().id;
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, (err, res) => {
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
                                     const day = dpReading.date.slice(0,2);
