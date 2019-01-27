@@ -293,9 +293,9 @@ module.exports = function(Meter) {
                     if (device) {
                         service += "?var=" +device+ ".DP";
                     } else {
-                        Object.keys(meter.devices).forEach((key, index) => {
+                        meter.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ meter.devices[key] + ".DP";
+                                service += "?var="+ device.name + ".DP";
                             }
                         });
                     }
@@ -416,9 +416,9 @@ module.exports = function(Meter) {
                     if (device) {
                         service += "?var=" +device+ ".EPimp";
                     } else {
-                        Object.keys(meter.devices).forEach((key, index) => {
+                        meter.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ meter.devices[key] + ".EPimp";
+                                service += "?var="+ device.name + ".EPimp";
                             }
                         });
                     }
@@ -528,8 +528,10 @@ module.exports = function(Meter) {
                     if (device) {
                         service += "?var=" + device + ".EPimp";
                     } else {
-                        meter.devices.map(device => {
-                            service += "?var="+device+".EPimp";
+                        meter.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ device.name + ".EPimp";
+                            }
                         });
                     }
                     service += "?period=" + dates.period;
@@ -768,9 +770,9 @@ module.exports = function(Meter) {
                             Object.keys(reading.devices.id).forEach(function(key) {
                                 meter.devices.push(reading.devices.id[key]._text);
                             });
-                            meter.save(function(err, dsgMeter){
+                            /* meter.save(function(err, dsgMeter){
                                 cb(null, dsgMeter);
-                            });
+                            }); */
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }

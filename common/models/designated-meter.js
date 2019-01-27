@@ -45,11 +45,12 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall += "?period="+dates.period;
-
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
                     if (xhr.readyState < 3) {
@@ -139,8 +140,10 @@ module.exports = function(Designatedmeter) {
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('service to call:', serviceToCall);
@@ -249,8 +252,10 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
-                meter.devices.map(device => {
-                    serviceToCall += "?var="+device+".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall += "?period=" +dates.period;
                 xhr.open('GET', serviceToCall);
@@ -330,8 +335,10 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
-                meter.devices.map(device => {
-                    serviceToCall += "?var="+device+".EPimp"+"?var="+device+".EQimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+device.name+".EPimp"+"?var="+device.name+".EQimp";
+                    }
                 });
                 serviceToCall += "?period=" + dates.period;
     
@@ -436,8 +443,10 @@ module.exports = function(Designatedmeter) {
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 xhr.open('GET', serviceToCall);
@@ -660,16 +669,15 @@ module.exports = function(Designatedmeter) {
             .then(meters => {
                 async.each(meters, (meter, next) => {
                     let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
+                    console.log(meter.devices);
                     meter.devices.forEach((device, index) => {
-                        if (index === 0) {
-                            return;
-                        }
                         let id = device;
                         if (device.name && device.description) {
                             id = device.name;
                         }
                         serviceToCall += `?id=${id}`;
                     });
+                    console.log(serviceToCall);
                     let xhr = new XMLHttpRequest();
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
@@ -683,9 +691,10 @@ module.exports = function(Designatedmeter) {
                             meter.devices = reading.devices.device.map(device => 
                                 ({
                                     name: device.id._text,
-                                    description: device.description._text
+                                    description: (device.description)? device.description._text: 'EDS'
                                 })
                             );
+                            meter.devices.push()
                             meter.save(function(err, dsgMeter){
                                 next();
                             });
