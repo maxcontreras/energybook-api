@@ -110,7 +110,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in consumption summary");
                 };
                 xhr.send();
             }, function(_err) {
@@ -221,7 +221,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in daily readings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -302,7 +302,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in epimpHistory");
                 };
                 xhr.send();
             }, function(_err) {
@@ -407,7 +407,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in fpReadings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -526,7 +526,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in monthly readings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -600,7 +600,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in odometerReadings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -653,4 +653,62 @@ module.exports = function(Designatedmeter) {
             ],
             returns: { arg: 'results', type: 'object' }
     });
+
+    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(cb) {
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        DesignatedMeter.find({})
+            .then(meters => {
+                async.each(meters, (meter, next) => {
+                    let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
+                    meter.devices.forEach((device, index) => {
+                        if (index === 0) {
+                            return;
+                        }
+                        let id = device;
+                        if (device.name && device.description) {
+                            id = device.name;
+                        }
+                        serviceToCall += `?id=${id}`;
+                    });
+                    let xhr = new XMLHttpRequest();
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            meter.devices = reading.devices.device.map(device => 
+                                ({
+                                    name: device.id._text,
+                                    description: device.description._text
+                                })
+                            );
+                            meter.save(function(err, dsgMeter){
+                                next();
+                            });
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            next();
+                        }
+                    }
+                    xhr.onerror = function() {
+                        console.log('An error occurred while opening the request');
+                        next();
+                    };
+                    xhr.send();
+                }, (err => {
+                    if (err) return cb({ status: 501, message: 'Error al guardar descripción de un dispositivo' });
+                    cb(null, 'OK');
+                }));
+            });
+    }
+
+    Designatedmeter.remoteMethod(
+        'setDeviceDescriptions', {
+            accepts: [],
+            returns: {arg: 'result', type: 'string'}
+        }
+    );
 };
