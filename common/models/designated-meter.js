@@ -669,7 +669,6 @@ module.exports = function(Designatedmeter) {
             .then(meters => {
                 async.each(meters, (meter, next) => {
                     let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
-                    console.log(meter.devices);
                     meter.devices.forEach((device, index) => {
                         let id = device;
                         if (device.name && device.description) {
@@ -677,7 +676,6 @@ module.exports = function(Designatedmeter) {
                         }
                         serviceToCall += `?id=${id}`;
                     });
-                    console.log(serviceToCall);
                     let xhr = new XMLHttpRequest();
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
