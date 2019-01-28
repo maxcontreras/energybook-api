@@ -45,11 +45,12 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall += "?period="+dates.period;
-
                 xhr.open('GET', serviceToCall);
                 setTimeout(() => {
                     if (xhr.readyState < 3) {
@@ -110,7 +111,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in consumption summary");
                 };
                 xhr.send();
             }, function(_err) {
@@ -139,8 +140,10 @@ module.exports = function(Designatedmeter) {
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 // console.log('service to call:', serviceToCall);
@@ -180,21 +183,10 @@ module.exports = function(Designatedmeter) {
                             // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
                             let company_id = meter.company().id;
 
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, (err, res) => {
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
-                                    const day = dpReading.date.slice(0,2);
-                                    const month = dpReading.date.slice(2,4);
-                                    const year = dpReading.date.slice(4,8);
-                                    const hour = dpReading.date.slice(8,10);
-                                    const minute = dpReading.date.slice(10,12);
-                                    const second = dpReading.date.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
-                                    
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
-                                    const rate_type = CFE_rates.rate_type;
-
-                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
                                         maxDp = parseFloat(dpReading.value);
                                     }
                                 });
@@ -232,7 +224,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in daily readings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -260,8 +252,10 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
-                meter.devices.map(device => {
-                    serviceToCall += "?var="+device+".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall += "?period=" +dates.period;
                 xhr.open('GET', serviceToCall);
@@ -313,7 +307,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in epimpHistory");
                 };
                 xhr.send();
             }, function(_err) {
@@ -341,8 +335,10 @@ module.exports = function(Designatedmeter) {
                 let xhr = new XMLHttpRequest();
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
-                meter.devices.map(device => {
-                    serviceToCall += "?var="+device+".EPimp"+"?var="+device+".EQimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+device.name+".EPimp"+"?var="+device.name+".EQimp";
+                    }
                 });
                 serviceToCall += "?period=" + dates.period;
     
@@ -418,7 +414,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in fpReadings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -447,8 +443,10 @@ module.exports = function(Designatedmeter) {
                 var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
                     +dates.end;
-                Object.keys(meter.devices).forEach(function(key) {
-                    serviceToCall += "?var="+ meter.devices[key] + ".EPimp";
+                meter.devices.forEach((device, index) => {
+                    if (index !== 0) {
+                        serviceToCall += "?var="+ device.name + ".EPimp";
+                    }
                 });
                 serviceToCall = serviceToCall + "?period=" + dates.period;
                 xhr.open('GET', serviceToCall);
@@ -497,21 +495,10 @@ module.exports = function(Designatedmeter) {
 
                             // console.log('monthly dist: '+ meter.device_name + ': value => ' + meter.latestValues.distribution);
                             let company_id = meter.company().id;
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, (err, res) => {
+                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
                                 let maxDp = 0;
                                 res.forEach((dpReading) => {
-                                    const day = dpReading.date.slice(0,2);
-                                    const month = dpReading.date.slice(2,4);
-                                    const year = dpReading.date.slice(4,8);
-                                    const hour = dpReading.date.slice(8,10);
-                                    const minute = dpReading.date.slice(10,12);
-                                    const second = dpReading.date.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second;
-                                    
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
-                                    const rate_type = CFE_rates.rate_type;
-
-                                    if (rate_type === 'peak' && parseFloat(dpReading.value) > maxDp) {
+                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
                                         maxDp = parseFloat(dpReading.value);
                                     }
                                 });
@@ -548,7 +535,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in monthly readings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -622,7 +609,7 @@ module.exports = function(Designatedmeter) {
                     else next();
                 };
                 xhr.onabort = function () {
-                    console.error("The request timed out");
+                    console.error("The request timed out in odometerReadings");
                 };
                 xhr.send();
             }, function(_err) {
@@ -675,4 +662,60 @@ module.exports = function(Designatedmeter) {
             ],
             returns: { arg: 'results', type: 'object' }
     });
+
+    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(cb) {
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        DesignatedMeter.find({})
+            .then(meters => {
+                async.each(meters, (meter, next) => {
+                    let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
+                    meter.devices.forEach((device, index) => {
+                        let id = device;
+                        if (device.name && device.description) {
+                            id = device.name;
+                        }
+                        serviceToCall += `?id=${id}`;
+                    });
+                    let xhr = new XMLHttpRequest();
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            meter.devices = reading.devices.device.map(device => 
+                                ({
+                                    name: device.id._text,
+                                    description: (device.description)? device.description._text: 'EDS'
+                                })
+                            );
+                            meter.devices.push()
+                            meter.save(function(err, dsgMeter){
+                                next();
+                            });
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            next();
+                        }
+                    }
+                    xhr.onerror = function() {
+                        console.log('An error occurred while opening the request');
+                        next();
+                    };
+                    xhr.send();
+                }, (err => {
+                    if (err) return cb({ status: 501, message: 'Error al guardar descripción de un dispositivo' });
+                    cb(null, 'OK');
+                }));
+            });
+    }
+
+    Designatedmeter.remoteMethod(
+        'setDeviceDescriptions', {
+            accepts: [],
+            returns: {arg: 'result', type: 'string'}
+        }
+    );
 };

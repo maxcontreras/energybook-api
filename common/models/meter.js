@@ -293,9 +293,9 @@ module.exports = function(Meter) {
                     if (device) {
                         service += "?var=" +device+ ".DP";
                     } else {
-                        Object.keys(meter.devices).forEach((key, index) => {
+                        meter.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ meter.devices[key] + ".DP";
+                                service += "?var="+ device.name + ".DP";
                             }
                         });
                     }
@@ -338,6 +338,12 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const rate_type = CFE_rates.rate_type;
+
+                                    dp.isPeak = rate_type === 'peak';
+
                                     let utc_date = moment(tmp_date).tz(timezone);
                                     dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(dp);
@@ -406,8 +412,17 @@ module.exports = function(Meter) {
                         dates.period = interval;
                     }
 
-                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                                    +dates.end+ "?var=" +device+ ".DP?var=" +device+ ".EPimp?period=" +dates.period;
+                    let service = meter.hostname+API_PREFIX+"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
+                    if (device) {
+                        service += "?var=" +device+ ".EPimp";
+                    } else {
+                        meter.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ device.name + ".EPimp";
+                            }
+                        });
+                    }
+                    service += "?period=" +dates.period;
                     xhr.open('GET', service);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -435,8 +450,16 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                                     let utc_date = moment(tmp_date).tz(timezone);
-                                    epimp.value = item.field[1].value._text;
-                                    epimp.value = (epimp.value < 0)? 0:epimp.value;
+                                    let tmp_values = [];
+                                    if (!Array.isArray(item.field)) {
+                                        tmp_values.push(item.field);
+                                    } else {
+                                        tmp_values = item.field;
+                                    }
+                                    epimp.value = tmp_values.reduce((accumulator, currentValue) => {
+                                        return accumulator + parseFloat(currentValue.value._text);
+                                    }, 0);
+                                    epimp.value = (epimp.value < 0)? 0:epimp.value.toFixed(2);
                                     epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
                                     values.push(epimp);
                                 });
@@ -505,8 +528,10 @@ module.exports = function(Meter) {
                     if (device) {
                         service += "?var=" + device + ".EPimp";
                     } else {
-                        meter.devices.map(device => {
-                            service += "?var="+device+".EPimp";
+                        meter.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                service += "?var="+ device.name + ".EPimp";
+                            }
                         });
                     }
                     service += "?period=" + dates.period;
@@ -745,9 +770,9 @@ module.exports = function(Meter) {
                             Object.keys(reading.devices.id).forEach(function(key) {
                                 meter.devices.push(reading.devices.id[key]._text);
                             });
-                            meter.save(function(err, dsgMeter){
+                            /* meter.save(function(err, dsgMeter){
                                 cb(null, dsgMeter);
-                            });
+                            }); */
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
