@@ -663,9 +663,13 @@ module.exports = function(Designatedmeter) {
             returns: { arg: 'results', type: 'object' }
     });
 
-    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(cb) {
+    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(meterId, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        DesignatedMeter.find({})
+        DesignatedMeter.find({
+            where: {
+                id: meterId
+            }
+        })
             .then(meters => {
                 async.each(meters, (meter, next) => {
                     let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
@@ -714,7 +718,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.remoteMethod(
         'setDeviceDescriptions', {
-            accepts: [],
+            accepts: [
+                {arg: 'meterId', type: 'string', required: false}
+            ],
             returns: {arg: 'result', type: 'string'}
         }
     );

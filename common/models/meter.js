@@ -770,9 +770,12 @@ module.exports = function(Meter) {
                             Object.keys(reading.devices.id).forEach(function(key) {
                                 meter.devices.push(reading.devices.id[key]._text);
                             });
-                            /* meter.save(function(err, dsgMeter){
-                                cb(null, dsgMeter);
-                            }); */
+                            meter.save(function(err, dsgMeter){
+                                DesignatedMeter.setDeviceDescriptions(meter.id, (err, res) => {
+                                    if (err) return cb(err, null);
+                                    cb(null, dsgMeter);
+                                });
+                            });
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
