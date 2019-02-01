@@ -68,7 +68,13 @@ module.exports = function(Designatedmeter) {
                         }
                         if(reading.recordGroup && reading.recordGroup.record){
                             let read = {};
-                            reading.recordGroup.record.map((item) => {
+                            let iterable = [];
+                            if (!Array.isArray(reading.recordGroup.record)) {
+                                iterable.push(reading.recordGroup.record);
+                            } else {
+                                iterable = reading.recordGroup.record;
+                            }
+                            iterable.map((item) => {
                                 let key = 0;
                                 for (let device of item.field) {
                                     const name = device.id._text.split(".")[0];
