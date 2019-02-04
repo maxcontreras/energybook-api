@@ -7,6 +7,7 @@ const API_PREFIX = "/services/user/";
 const Converter = require('xml-js');
 const moment = require('moment-timezone');
 const Constants = require('./../../server/constants.json');
+const _l = require('lodash');
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const xhr = new XMLHttpRequest();
@@ -250,8 +251,141 @@ module.exports = function(Meter) {
         }
     );
 
+    Meter.getNetCodeReadings = function getNetCodeReadings(id, device, filter, variables, custom_dates, cb) {
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter) {
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if (meter) {
+                    let xhr = new XMLHttpRequest();
+                    let values = {};
+                    for (const variable of variables) {
+                        values[variable] = [];
+                    }
+
+                    let dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+
+                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    if (device) {
+                        for (const variable of variables) {
+                            service += `?var=${device}.${variable}`;
+                        }
+                    } else {
+                        meter.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                for (const variable of variables) {
+                                    service += `?var=${device.name}.${variable}`;
+                                }
+                            }
+                        });
+                    }
+                    service += "?period=" +dates.period;
+                    // Call the service
+                    // console.log(`Service to call: ${service}`);
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+
+                    // Wait for the request to load
+                    xhr.onload = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            let reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            if(reading.recordGroup && reading.recordGroup.record) {
+                                // Prepare array to iterate over readings
+                                let netCode = _l.cloneDeep(values);
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    iterable.push(reading.recordGroup.record)
+                                } else {
+                                    iterable = reading.recordGroup.record;
+                                }
+                                iterable.map(item => {
+                                    for (const key in netCode) {
+                                        netCode[key] = {
+                                            value: 0,
+                                            date: null
+                                        }
+                                    }
+                                    let iterable_values = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable_values.push(item.field);
+                                    } else {
+                                        iterable_values = item.field;
+                                    }
+                                    iterable_values.forEach(value => {
+                                        const current_variable = value.id._text.split('.')[1];
+                                        netCode[current_variable].value += parseFloat(value.value._text);
+                                    });
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let utc_date = moment(tmp_date).tz(timezone);
+
+                                    for (const key in netCode) {
+                                        netCode[key].date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
+                                        netCode[key].value = netCode[key].value.toFixed(2);
+                                        values[key].push(netCode[key]);
+                                    }
+                                });
+                            }
+                            cb(null, values);
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    }
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on netCodeReadings");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("netCodeReadings request timed out");
+                    };
+                    // Send the request
+                    xhr.send();
+                }
+            });
+        }
+    }
+
+    Meter.remoteMethod(
+        'getNetCodeReadings', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string', required: false, default: '' },
+                { arg: 'filter', type: 'number' },
+                { arg: 'variables', type: 'array' },
+                { arg: 'custom_dates', type: 'object' }
+            ],
+            returns: { arg: 'values', type: 'object', root: true }
+        }
+    );
+
     Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, custom_dates, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
         else {
