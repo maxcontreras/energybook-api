@@ -334,7 +334,7 @@ module.exports = function(Meter) {
                                     }
                                     iterable_values.forEach(value => {
                                         const current_variable = value.id._text.split('.')[1];
-                                        netCode[current_variable].value += parseFloat(value.value._text);
+                                        netCode[current_variable].value = parseFloat(value.value._text);
                                     });
                                     const day = item.dateTime._text.slice(0,2);
                                     const month = item.dateTime._text.slice(2,4);
