@@ -251,7 +251,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getNetCodeReadings = function getNetCodeReadings(id, device, filter, variables, custom_dates, cb) {
+    Meter.getNetCodeReadings = function getNetCodeReadings(id, device, filter, variables, interval, custom_dates, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -281,6 +281,8 @@ module.exports = function(Meter) {
                     }
 
                     let dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+
+                    dates.period = interval;
 
                     let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
                     if (device) {
@@ -378,6 +380,7 @@ module.exports = function(Meter) {
                 { arg: 'device', type: 'string', required: false, default: '' },
                 { arg: 'filter', type: 'number' },
                 { arg: 'variables', type: 'array' },
+                { arg: 'interval', type: 'number' },
                 { arg: 'custom_dates', type: 'object' }
             ],
             returns: { arg: 'values', type: 'object', root: true }
