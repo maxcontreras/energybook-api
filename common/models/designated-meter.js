@@ -40,6 +40,7 @@ const fpFormula = function(P, Q) {
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
+        let devicesDescription = {};
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
                 let xhr = new XMLHttpRequest();
@@ -47,6 +48,7 @@ module.exports = function(Designatedmeter) {
                 let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
                 meter.devices.forEach((device, index) => {
                     if (index !== 0) {
+                        devicesDescription[device.name] = device.description;
                         serviceToCall += "?var="+ device.name + ".EPimp";
                     }
                 });
@@ -68,10 +70,16 @@ module.exports = function(Designatedmeter) {
                         }
                         if(reading.recordGroup && reading.recordGroup.record){
                             let read = {};
-                            reading.recordGroup.record.map((item) => {
+                            let iterable = [];
+                            if (!Array.isArray(reading.recordGroup.record)) {
+                                iterable.push(reading.recordGroup.record);
+                            } else {
+                                iterable = reading.recordGroup.record;
+                            }
+                            iterable.map((item) => {
                                 let key = 0;
                                 for (let device of item.field) {
-                                    const name = device.id._text.split(".")[0];
+                                    const name = devicesDescription[device.id._text.split(".")[0]];
                                     const value = parseInt(device.value._text);
                                     if (!read[key]) {
                                         read[key] = {};
@@ -663,9 +671,13 @@ module.exports = function(Designatedmeter) {
             returns: { arg: 'results', type: 'object' }
     });
 
-    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(cb) {
+    Designatedmeter.setDeviceDescriptions = function setDeviceDescription(meterId, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        DesignatedMeter.find({})
+        DesignatedMeter.find({
+            where: {
+                id: meterId
+            }
+        })
             .then(meters => {
                 async.each(meters, (meter, next) => {
                     let serviceToCall = meter.hostname+API_PREFIX+'deviceInfo.xml';
@@ -714,7 +726,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.remoteMethod(
         'setDeviceDescriptions', {
-            accepts: [],
+            accepts: [
+                {arg: 'meterId', type: 'string', required: false}
+            ],
             returns: {arg: 'result', type: 'string'}
         }
     );

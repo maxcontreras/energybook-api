@@ -68,7 +68,10 @@ module.exports = function(Company) {
             }, function (err, designatedMeter){
                 if(err) cb({status: 400, message: "Error al asignar medidor"}, null);
                 else {
-                    cb(null, 'Medidor '+ designatedMeter.meter_id +' asignado correctamente');
+                    Meters.storeConnectedDevices(designateMeter.meter_id, (err, met) => {
+                        if (err) return cb(err, null);
+                        cb(null, 'Medidor '+ designatedMeter.meter_id +' asignado correctamente');
+                    });
                 }
             });
         }

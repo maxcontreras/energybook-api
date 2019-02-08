@@ -63,5 +63,9 @@
   "CompanyType": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "AdminValue": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }

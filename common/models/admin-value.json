@@ -1,0 +1,64 @@
+{
+    "name": "AdminValue",
+    "plural": "AdminValues",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true
+    },
+    "properties": {
+      "date": {
+        "type": "date",
+        "required": true
+      },
+      "basePrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "middlePrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "peakPrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "capacityPrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "distributionPrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [
+      {
+        "accessType": "*",
+        "principalType": "ROLE",
+        "principalId": "$unauthenticated",
+        "permission": "DENY"
+      },
+      {
+        "accessType": "*",
+        "principalType": "ROLE",
+        "principalId": "admin",
+        "permission": "ALLOW"
+      },
+      {
+        "accessType": "*",
+        "principalType": "ROLE",
+        "principalId": "$owner",
+        "permission": "ALLOW"
+      }
+    ],
+    "methods": {}
+  }
+  
