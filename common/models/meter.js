@@ -631,7 +631,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, interval, cb) {
+    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, interval, custom_dates, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
@@ -656,8 +656,8 @@ module.exports = function(Meter) {
                 if (meter) {
                     let xhr = new XMLHttpRequest();
 
-                    // TODO: calculate costs 
-                    let dates = EDS.dateFilterSetup(filter);
+                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                    
                     // Set period fixed to 1 hour
                     dates.period = 3600;
                     let service = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
@@ -809,7 +809,8 @@ module.exports = function(Meter) {
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
                 { arg: 'filter', type: 'number' },
-                { arg: 'interval', type: 'number' }
+                { arg: 'interval', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
             ],
             returns: { arg: 'costs', type: 'array', root: true }
         }
