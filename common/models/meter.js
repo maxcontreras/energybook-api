@@ -454,7 +454,7 @@ module.exports = function(Meter) {
                                 } else {
                                     iterable = reading.recordGroup.record;
                                 }
-                                iterable.map(item => {
+                                values = iterable.map(item => {
                                     dp = {};
                                     let tmp_values = [];
                                     if (!Array.isArray(item.field)) {
@@ -476,14 +476,13 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
-                                    const rate_type = CFE_rates.rate_type;
+                                    const rate_type = EDS.getCFERateType(tmp_date);
 
                                     dp.isPeak = rate_type === 'peak';
 
                                     let utc_date = moment(tmp_date).tz(timezone);
                                     dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
-                                    values.push(dp);
+                                    return dp;
                                 });
                             }
                             cb(null, values);
@@ -702,7 +701,7 @@ module.exports = function(Meter) {
                                 }
                                 // Saves values grouped by day interval
                                 let dailyValues = [];
-                                values = records.map(item => {
+                                async.eachSeries(records, async item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
                                     const month = item.dateTime._text.slice(2,4);
@@ -712,7 +711,7 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                    const CFE_rates = EDS.getCFERate(tmp_date);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date);
                                     const rate = CFE_rates.rate;
                                     const rate_type = CFE_rates.rate_type;
                                     let date = CFE_rates.date;
@@ -752,32 +751,41 @@ module.exports = function(Meter) {
                                         }
                                         dailyCosts += sum * rate;
                                         rateCosts[rate_type] += sum * rate;
-                                        return null;
+                                        Promise.resolve();
                                     } else {
                                         // Result object
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
                                         read.cost = (sum*rate).toFixed(2);
                                         read.rate = rate_type;
-                                        return read;
+                                        if (read.rate === 'peak') {
+                                            // console.log(read.date, ' consumption is ', sum, ' and price is ', rate);
+                                        }
+                                        values.push(read);
+                                        Promise.resolve();
+                                    }
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    if (interval === 1) {
+                                        if (prevDay != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.cost = dailyCosts.toFixed(2);
+                                            read.rate = "diario";
+                                            rateCosts.base = rateCosts.base.toFixed(2);
+                                            rateCosts.middle = rateCosts.middle.toFixed(2);
+                                            rateCosts.peak = rateCosts.peak.toFixed(2);
+                                            read.rateCosts = rateCosts;
+                                            dailyValues.push(read);
+                                        }
+                                        // If interval is daily, replace values with dailyValues
+                                        cb(null, dailyValues);
+                                    } else {
+                                        cb(null, values);
                                     }
                                 });
-                                if (interval === 1) {
-                                    if (prevDay != null) {
-                                        let read = {};
-                                        read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                        read.cost = dailyCosts.toFixed(2);
-                                        read.rate = "diario";
-                                        rateCosts.base = rateCosts.base.toFixed(2);
-                                        rateCosts.middle = rateCosts.middle.toFixed(2);
-                                        rateCosts.peak = rateCosts.peak.toFixed(2);
-                                        read.rateCosts = rateCosts;
-                                        dailyValues.push(read);
-                                    }
-                                    // If interval is daily, replace values with dailyValues
-                                    values = dailyValues;
-                                }
+                            } else {
+                                return cb(null, values)
                             }
-                            cb(null, values);
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
