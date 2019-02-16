@@ -32,6 +32,11 @@
       "type": "belongsTo",
       "model": "Meter",
       "foreignKey": "meter_id"
+    },
+    "services": {
+      "type": "hasMany",
+      "model": "Service",
+      "foreignKey": "designatedMeterId"
     }
   },
   "acls": [],

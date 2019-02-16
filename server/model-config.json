@@ -67,5 +67,9 @@
   "AdminValue": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "Service": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }
