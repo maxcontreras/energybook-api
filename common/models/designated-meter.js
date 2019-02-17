@@ -96,12 +96,13 @@ module.exports = function(Designatedmeter) {
                                     "consumptionSummary",
                                     consumptionSummatory, (err, updated) => {
                                         if(err) return nextService(err);
-                                        /* let socketData = {
+                                        let socketData = {
                                             socketEvent: 'consumptionSummary',
-                                            data: meter.latestValues.consumption
+                                            data: updated.consumptionSummary,
+                                            service: updated.serviceName
                                         };
                                         socketData = JSON.stringify(socketData);
-                                        Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
                                         nextService();
                                 });
                             }
@@ -201,12 +202,13 @@ module.exports = function(Designatedmeter) {
                                         "dailyReadings",
                                         dailyReadings, (err, updated) => {
                                             if(err) return nextService(err);
-                                            /* let socketData = {
+                                            let socketData = {
                                                 socketEvent: 'dailyReading',
-                                                data: dsgMeter.latestValues
+                                                data: updated.dailyReadings,
+                                                service: updated.serviceName
                                             };
                                             socketData = JSON.stringify(socketData);
-                                            Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                            Socket.sendMessageToCompanyUsers(company_id, socketData);
                                             nextService();
                                     });
                                 });
@@ -291,12 +293,13 @@ module.exports = function(Designatedmeter) {
 
                                 service.updateAttribute("epimp", epimp, (err, updated) => {
                                     if (err) return nextService(err);
-                                    /* let socketData = {
+                                    let socketData = {
                                         socketEvent: 'epimpHistoryReading',
-                                        data: meter.latestValues.epimp
+                                        data: updated.epimp,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
-                                    Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
                                     nextService();
                                 });
                             }
@@ -386,18 +389,20 @@ module.exports = function(Designatedmeter) {
                                     reactive
                                 }, (err, updated) => {
                                     if(err) return nextService(err);
-                                    /* let socketData = {
+                                    let socketData = {
                                         socketEvent: 'powerFactor',
-                                        data: meter.latestValues.fp
+                                        data: updated.fp,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
                                     socketData = {
                                         socketEvent: 'reactive',
-                                        data: meter.latestValues.reactive
+                                        data: updated.reactive,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
-                                    Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
                                     nextService();
                                 });
                             } else {
@@ -496,12 +501,13 @@ module.exports = function(Designatedmeter) {
 
                                     service.updateAttribute("monthlyReadings", monthlyReadings, (err, updated) => {
                                         if(err) return nextService(err);
-                                        /* let socketData = {
+                                        let socketData = {
                                             socketEvent: 'monthlyReading',
-                                            data: meter.latestValues
+                                            data: updated.monthlyReadings,
+                                            service: updated.serviceName
                                         };
                                         socketData = JSON.stringify(socketData);
-                                        Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
                                         nextService();
                                     });
                                 });
@@ -569,12 +575,13 @@ module.exports = function(Designatedmeter) {
 
                                 service.updateAttribute("dp", dp, (err, updated) => {
                                     if (err) return nextService(err)
-                                    /* let socketData = {
+                                    let socketData = {
                                         socketEvent: 'odometerReading',
-                                        data: meter.latestValues.dp
+                                        data: updated.dp,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
-                                    Socket.sendMessageToCompanyUsers(company_id, socketData); */
+                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
                                     nextService();
                                 });
                             } else {

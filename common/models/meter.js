@@ -679,7 +679,7 @@ module.exports = function(Meter) {
                         if (xhr.readyState < 3) {
                             xhr.abort();
                         }
-                    }, 4000);
+                    }, 8000);
                     xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -816,44 +816,6 @@ module.exports = function(Meter) {
                 { arg: 'custom_dates', type: 'object' }
             ],
             returns: { arg: 'costs', type: 'array', root: true }
-        }
-    );
-
-    Meter.initializer = function initializer(id, cb){
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-
-        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
-        else {
-            DesignatedMeter.findOne({
-                include: [
-                    {
-                        relation: 'company'
-                    },
-                    {
-                        relation: 'meter'
-                    }
-                ],
-                where: {
-                    and: [
-                        { meter_id: id },
-                        { active: 1 }
-                    ]
-                },
-            }, function(err, meter){
-                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
-                if(meter){
-                    cb(null, meter.latestValues);
-                }
-            });
-        }
-    };
-
-    Meter.remoteMethod(
-        'initializer', {
-            accepts: [
-                { arg: 'id', type: 'string' }
-            ],
-            returns: { arg: 'latestValues', type: 'object' }
         }
     );
 
