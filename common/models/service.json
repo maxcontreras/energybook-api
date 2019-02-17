@@ -19,6 +19,36 @@
           "type": "object",
           "required": true,
           "default": {}
+      },
+      "dailyReadings": {
+          "type": "object",
+          "required": true,
+          "default": {}
+      },
+      "monthlyReadings": {
+        "type": "object",
+        "required": true,
+        "default": {}
+      },
+      "epimp": {
+          "type": "object",
+          "required": true,
+          "default": {}
+      },
+      "fp": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "reactive": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "dp": {
+        "type": "number",
+        "required": true,
+        "default": 0
       }
     },
     "validations": [],

@@ -116,6 +116,9 @@ module.exports = function(Meter) {
                 },
                 {
                     relation: 'meter'
+                },
+                {
+                    relation: 'services'
                 }
             ],
             where: {
