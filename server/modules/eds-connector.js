@@ -7,6 +7,7 @@ const xhr = new XMLHttpRequest();
 const Constants = require('./../../server/constants.json');
 const moment = require('moment-timezone');
 const async = require('async');
+const app = require('../server.js');
 
 
 const API_PREFIX = "/services/user/";
@@ -232,7 +233,7 @@ var dateFilterSetup = function dateFilterSetup(filter, dates = {}){
     }
 }
 
-const getCFERate = function(ISOdate) {
+const getCFERateType = function(ISOdate) {
     let date = moment(ISOdate).tz(timezone);
 
     // get CFE period
@@ -251,13 +252,27 @@ const getCFERate = function(ISOdate) {
     }
 
     // obtain corresponding rate
-    const rate_type = Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
-    const rate = Constants.CFE.values.consumption_price[rate_type];
-    return {
-        rate,
-        rate_type,
-        date
-    }
+    return Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
+}
+
+const getCFERate = function(ISOdate) {
+    let AdminValue = app.loopback.getModel('AdminValue');
+    let date = moment(ISOdate).tz(timezone);
+    let new_date = date.clone().startOf('month').format();
+
+    const rate_type = getCFERateType(ISOdate);
+    return new Promise((resolve, reject) => {
+        AdminValue.findByDate(new_date, (err, res) => {
+            if (err) reject(err);
+            else {
+                resolve({
+                    rate: res[`${rate_type}Price`],
+                    rate_type,
+                    date
+                });
+            }
+        });
+    });
 }
 
 
@@ -270,3 +285,4 @@ module.exports.readDemand = readDemand;
 module.exports.readEPimpHistory = readEPimpHistory;
 module.exports.dateFilterSetup = dateFilterSetup;
 module.exports.getCFERate = getCFERate;
+module.exports.getCFERateType = getCFERateType;

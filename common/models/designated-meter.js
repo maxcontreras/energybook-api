@@ -43,85 +43,86 @@ module.exports = function(Designatedmeter) {
         let devicesDescription = {};
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
-                let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
-                meter.devices.forEach((device, index) => {
-                    if (index !== 0) {
-                        devicesDescription[device.name] = device.description;
-                        serviceToCall += "?var="+ device.name + ".EPimp";
-                    }
-                });
-                serviceToCall += "?period="+dates.period;
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        if(!meter.latestValues.consumption){
-                            meter.latestValues.consumption = {};
-                            meter.latestValues.consumption.summatory = {};
-                        } else {
-                            meter.latestValues.consumption.summatory = {};
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            devicesDescription[device.name] = device.description;
+                            serviceToCall += "?var="+ device.name + ".EPimp";
                         }
-                        if(reading.recordGroup && reading.recordGroup.record){
-                            let read = {};
-                            let iterable = [];
-                            if (!Array.isArray(reading.recordGroup.record)) {
-                                iterable.push(reading.recordGroup.record);
-                            } else {
-                                iterable = reading.recordGroup.record;
-                            }
-                            iterable.map((item) => {
-                                let key = 0;
-                                for (let device of item.field) {
-                                    const name = devicesDescription[device.id._text.split(".")[0]];
-                                    const value = parseInt(device.value._text);
-                                    if (!read[key]) {
-                                        read[key] = {};
-                                        read[key].value = 0;
-                                    }
-                                    read[key].device = name;
-                                    read[key].value += value;
-                                    key++;
+                    });
+                    serviceToCall += "?period="+dates.period;
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            if(reading.recordGroup && reading.recordGroup.record){
+                                let read = {};
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    iterable.push(reading.recordGroup.record);
+                                } else {
+                                    iterable = reading.recordGroup.record;
                                 }
-                            });
-                            Object.keys(read).forEach(key => {
-                                meter.latestValues.consumption.summatory[key] = read[key];
-                            });
-    
-                            let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                if(err) next(err);
-                                let socketData = {
-                                    socketEvent: 'consumptionSummary',
-                                    data: meter.latestValues.consumption
-                                };
-                                socketData = JSON.stringify(socketData);
-                                Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                next();
-                            });
+                                iterable.map((item) => {
+                                    let key = 0;
+                                    for (let device of item.field) {
+                                        const name = devicesDescription[device.id._text.split(".")[0]];
+                                        const value = parseInt(device.value._text);
+                                        if (!read[key]) {
+                                            read[key] = {};
+                                            read[key].value = 0;
+                                        }
+                                        read[key].device = name;
+                                        read[key].value += value;
+                                        key++;
+                                    }
+                                });
+                                let consumptionSummatory = {}
+                                Object.keys(read).forEach(key => {
+                                    consumptionSummatory[key] = read[key];
+                                });
+        
+                                let company_id = meter.company().id;
+                                service.updateAttribute(
+                                    "consumptionSummary",
+                                    consumptionSummatory, (err, updated) => {
+                                        if(err) return nextService(err);
+                                        let socketData = {
+                                            socketEvent: 'consumptionSummary',
+                                            data: updated.consumptionSummary,
+                                            service: updated.serviceName
+                                        };
+                                        socketData = JSON.stringify(socketData);
+                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                        nextService();
+                                });
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            var reading = {};
+                            nextService();
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        var reading = {};
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in consumption summary");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in consumption summary");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
@@ -144,97 +145,92 @@ module.exports = function(Designatedmeter) {
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
-                let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                    +dates.end;
-                meter.devices.forEach((device, index) => {
-                    if (index !== 0) {
-                        serviceToCall += "?var="+ device.name + ".EPimp";
-                    }
-                });
-                serviceToCall = serviceToCall + "?period=" + dates.period;
-                // console.log('service to call:', serviceToCall);
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        let summatory = 0;
-                        if(reading.recordGroup.record){
-                            reading.recordGroup.record.field.map(item=> {
-                                summatory += parseFloat(item.value._text);
-                            });
-                            let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
-                            let consumption = summatory
-                            let distributionCharge = distribution * Constants.CFE.values.distribution_price;
-                            distribution = distribution.toFixed(2);
-                            distributionCharge = distributionCharge.toFixed(2);
-                            consumption = consumption.toFixed(2);
-    
-                            meter.latestValues.lastUpdated = new Date();
-                            if(!meter.latestValues.distribution){
-                                meter.latestValues.distribution = {};
-                            }
-                            meter.latestValues.distribution.daily = distribution;
-                            meter.latestValues.distribution.charge = distributionCharge;
-    
-                            if(!meter.latestValues.consumption){
-                                meter.latestValues.consumption = {};
-                            }
-                            meter.latestValues.consumption.daily = consumption;
-
-                            // console.log('daily consumption: '+ meter.device_name + ': value => ' + meter.latestValues.consumption);
-                            let company_id = meter.company().id;
-
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
-                                let maxDp = 0;
-                                res.forEach((dpReading) => {
-                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
-                                        maxDp = parseFloat(dpReading.value);
-                                    }
-                                });
-                                if(!meter.latestValues.capacity){
-                                    meter.latestValues.capacity = {};
-                                }
-                                meter.latestValues.capacity.daily = Math.min(maxDp, parseFloat(distribution));
-
-                                meter.unsetAttribute("company");
-                                meter.unsetAttribute("meter");
-                                meter.save(function(err, dsgMeter){
-                                    if(err) next(err, null);
-                                    else {
-                                        let socketData = {
-                                            socketEvent: 'dailyReading',
-                                            data: dsgMeter.latestValues
-                                        };
-                                        socketData = JSON.stringify(socketData);
-                                        Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                        next();
-                                    }
-                                });
-                            });
-                        } else {
-                            next();
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+                        +dates.end;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+ device.name + ".EPimp";
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        console.log('error: ', xhr.status);
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    });
+                    serviceToCall = serviceToCall + "?period=" + dates.period;
+                    // console.log('service to call:', serviceToCall);
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let summatory = 0;
+                            if(reading.recordGroup.record){
+                                reading.recordGroup.record.field.map(item=> {
+                                    summatory += parseFloat(item.value._text);
+                                });
+                                let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
+                                let consumption = summatory
+                                let distributionCharge = distribution * Constants.CFE.values.distribution_price;
+                                distribution = distribution.toFixed(2);
+                                distributionCharge = distributionCharge.toFixed(2);
+                                consumption = consumption.toFixed(2);
+
+                                let dailyReadings = {};
+                                dailyReadings.lastUpdated = moment().format();
+
+                                dailyReadings.distribution = distribution;
+                                dailyReadings.chargeDistribution = distributionCharge;
+
+                                dailyReadings.consumption = consumption;
+
+                                let company_id = meter.company().id;
+
+                                Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
+                                    let maxDp = 0;
+                                    res.forEach((dpReading) => {
+                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
+                                            maxDp = parseFloat(dpReading.value);
+                                        }
+                                    });
+                                    dailyReadings.capacity = Math.min(maxDp, parseFloat(distribution));
+
+                                    service.updateAttribute(
+                                        "dailyReadings",
+                                        dailyReadings, (err, updated) => {
+                                            if(err) return nextService(err);
+                                            let socketData = {
+                                                socketEvent: 'dailyReading',
+                                                data: updated.dailyReadings,
+                                                service: updated.serviceName
+                                            };
+                                            socketData = JSON.stringify(socketData);
+                                            Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                            nextService();
+                                    });
+                                });
+                            } else {
+                                nextService();
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            nextService();
+                        }
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in daily readings");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in daily readings");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
@@ -257,67 +253,72 @@ module.exports = function(Designatedmeter) {
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
-                let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
-                meter.devices.forEach((device, index) => {
-                    if (index !== 0) {
-                        serviceToCall += "?var="+ device.name + ".EPimp";
-                    }
-                });
-                serviceToCall += "?period=" +dates.period;
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        if (reading.recordGroup && reading.recordGroup.record) {
-                            meter.latestValues.epimp = {};
-                            reading.recordGroup.record.map( (item, key) => {
-                                let read = {};
-                                if(item.field){
-                                    read.value = 0;
-                                    item.field.map(device => {
-                                        read.value += parseFloat(device.value._text);
-                                    });
-                                    read.value = read.value.toFixed(2);
-                                } else {
-                                    read.value = "0";
-                                }
-                                read.date = item.dateTime._text;
-                                meter.latestValues.epimp[key] = read;
-                            });
-                            let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                let socketData = {
-                                    socketEvent: 'epimpHistoryReading',
-                                    data: meter.latestValues.epimp
-                                };
-                                socketData = JSON.stringify(socketData);
-                                Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                next();
-                            });
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+ device.name + ".EPimp";
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        var reading = {};
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    });
+                    serviceToCall += "?period=" +dates.period;
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            let reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            if (reading.recordGroup && reading.recordGroup.record) {
+                                let epimp = {};
+                                reading.recordGroup.record.map( (item, key) => {
+                                    let read = {};
+                                    if(item.field){
+                                        read.value = 0;
+                                        item.field.map(device => {
+                                            read.value += parseFloat(device.value._text);
+                                        });
+                                        read.value = read.value.toFixed(2);
+                                    } else {
+                                        read.value = "0";
+                                    }
+                                    read.date = item.dateTime._text;
+                                    epimp[key] = read;
+                                });
+                                let company_id = meter.company().id;
+
+                                service.updateAttribute("epimp", epimp, (err, updated) => {
+                                    if (err) return nextService(err);
+                                    let socketData = {
+                                        socketEvent: 'epimpHistoryReading',
+                                        data: updated.epimp,
+                                        service: updated.serviceName
+                                    };
+                                    socketData = JSON.stringify(socketData);
+                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                    nextService();
+                                });
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            nextService();
+                        }
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in epimpHistory");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in epimpHistory");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
@@ -340,91 +341,89 @@ module.exports = function(Designatedmeter) {
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
-                let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
-                meter.devices.forEach((device, index) => {
-                    if (index !== 0) {
-                        serviceToCall += "?var="+device.name+".EPimp"+"?var="+device.name+".EQimp";
-                    }
-                });
-                serviceToCall += "?period=" + dates.period;
-    
-                // console.log('service to call:', serviceToCall);
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        let P = 0;
-                        let Q = 0;
-                        if(reading.recordGroup.record){
-                            let iterate = reading.recordGroup.record;
-                            if (Array.isArray(iterate)) {
-                                iterate = iterate[0];
-                            }
-                            iterate.field.map(read => {
-                                const type = read.id._text.split('.')[1];
-                                let value = parseFloat(read.value._text);
-                                if (type === 'EPimp') {
-                                    P += value;
-                                } else {
-                                    Q += value;
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+device.name+".EPimp"+"?var="+device.name+".EQimp";
+                        }
+                    });
+                    serviceToCall += "?period=" + dates.period;
+        
+                    // console.log('service to call:', serviceToCall);
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let P = 0;
+                            let Q = 0;
+                            if(reading.recordGroup.record){
+                                let iterate = reading.recordGroup.record;
+                                if (Array.isArray(iterate)) {
+                                    iterate = iterate[0];
                                 }
-                            });
-                            const fp = (fpFormula(P, Q)*100).toFixed(2);
-                            meter.latestValues.lastUpdated = new Date();
-                            if(!meter.latestValues.fp){
-                                meter.latestValues.fp = {};
-                            }
-                            meter.latestValues.fp.value = fp;
-                            if (!meter.latestValues.reactive){
-                                meter.latestValues.reactive = {}
-                            }
-                            meter.latestValues.reactive.value = Q.toFixed(2);
-    
-                            let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                if(err) next(err, null);
-                                else {
+                                iterate.field.map(read => {
+                                    const type = read.id._text.split('.')[1];
+                                    let value = parseFloat(read.value._text);
+                                    if (type === 'EPimp') {
+                                        P += value;
+                                    } else {
+                                        Q += value;
+                                    }
+                                });
+                                const fp = (fpFormula(P, Q)*100).toFixed(2);
+                                const reactive = Q.toFixed(2);
+        
+                                let company_id = meter.company().id;
+
+                                service.updateAttributes({
+                                    fp,
+                                    reactive
+                                }, (err, updated) => {
+                                    if(err) return nextService(err);
                                     let socketData = {
                                         socketEvent: 'powerFactor',
-                                        data: meter.latestValues.fp
+                                        data: updated.fp,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
                                     socketData = {
                                         socketEvent: 'reactive',
-                                        data: meter.latestValues.reactive
+                                        data: updated.reactive,
+                                        service: updated.serviceName
                                     };
                                     socketData = JSON.stringify(socketData);
                                     Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                    next();
-                                }
-                            });
-                        } else {
-                            next();
+                                    nextService();
+                                });
+                            } else {
+                                nextService();
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            nextService();
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        console.log('error: ', xhr.status);
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in fpReadings");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in fpReadings");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
@@ -447,105 +446,91 @@ module.exports = function(Designatedmeter) {
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
-                let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
-                    +dates.end;
-                meter.devices.forEach((device, index) => {
-                    if (index !== 0) {
-                        serviceToCall += "?var="+ device.name + ".EPimp";
-                    }
-                });
-                serviceToCall = serviceToCall + "?period=" + dates.period;
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        let summatory = 0;
-                        if(reading.recordGroup.record){
-                            let iterate = reading.recordGroup.record;
-                            if (Array.isArray(iterate)) {
-                                iterate = iterate[0];
-                            }
-                            Object.keys(iterate.field).forEach(function(key) {
-                                summatory += parseInt(iterate.field[key].value._text);
-                            });
-                            const day = iterate.dateTime._text.slice(0,2);
-                            const month = iterate.dateTime._text.slice(2,4);
-                            const year = iterate.dateTime._text.slice(4,8);
-                            const hour = iterate.dateTime._text.slice(8,10);
-                            const minute = iterate.dateTime._text.slice(10,12);
-                            const second = iterate.dateTime._text.slice(12,14);
-                            const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                            let utc_date = moment(tmp_date).tz(timezone);
-                            
-                            let consumption = parseInt(summatory);
-                            let distribution = ( consumption / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
-                            
-                            distribution = distribution.toFixed(2);
-                            consumption = consumption.toFixed(2);
-    
-                            meter.latestValues.lastUpdated = utc_date.format();
-                            if(!meter.latestValues.distribution){
-                                meter.latestValues.distribution = {};
-                            }
-                            meter.latestValues.distribution.monthly = distribution;
-    
-                            if(!meter.latestValues.consumption){
-                                meter.latestValues.consumption = {};
-                            }
-                            meter.latestValues.consumption.monthly = consumption;
-
-                            // console.log('monthly dist: '+ meter.device_name + ': value => ' + meter.latestValues.distribution);
-                            let company_id = meter.company().id;
-                            Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
-                                let maxDp = 0;
-                                res.forEach((dpReading) => {
-                                    if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
-                                        maxDp = parseFloat(dpReading.value);
-                                    }
-                                });
-                                if(!meter.latestValues.capacity){
-                                    meter.latestValues.capacity = {};
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
+                        +dates.end;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+ device.name + ".EPimp";
+                        }
+                    });
+                    serviceToCall = serviceToCall + "?period=" + dates.period;
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let summatory = 0;
+                            if(reading.recordGroup.record){
+                                let iterate = reading.recordGroup.record;
+                                if (Array.isArray(iterate)) {
+                                    iterate = iterate[0];
                                 }
-                                meter.latestValues.capacity.monthly = Math.min(maxDp, parseFloat(distribution));
-                                meter.unsetAttribute("company");
-                                meter.unsetAttribute("meter");
-                                meter.save(function(err, dsgMeter){
-                                    if(err) next(err, null);
-                                    else {
+                                Object.keys(iterate.field).forEach(function(key) {
+                                    summatory += parseInt(iterate.field[key].value._text);
+                                });
+                                
+                                let consumption = parseInt(summatory);
+                                let distribution = ( consumption / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
+                                
+                                distribution = distribution.toFixed(2);
+                                consumption = consumption.toFixed(2);
+
+                                let monthlyReadings = {};
+
+                                monthlyReadings.distribution = distribution;
+                                monthlyReadings.consumption = consumption;
+
+                                let company_id = meter.company().id;
+                                Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
+                                    let maxDp = 0;
+                                    res.forEach((dpReading) => {
+                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
+                                            maxDp = parseFloat(dpReading.value);
+                                        }
+                                    });
+
+                                    monthlyReadings.capacity = Math.min(maxDp, parseFloat(distribution));
+
+                                    service.updateAttribute("monthlyReadings", monthlyReadings, (err, updated) => {
+                                        if(err) return nextService(err);
                                         let socketData = {
                                             socketEvent: 'monthlyReading',
-                                            data: meter.latestValues
+                                            data: updated.monthlyReadings,
+                                            service: updated.serviceName
                                         };
                                         socketData = JSON.stringify(socketData);
                                         Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                        next();
-                                    }
+                                        nextService();
+                                    });
                                 });
-                            });
-                        } else {
-                            next();
+                            } else {
+                                nextService();
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            var reading = {};
+                            nextService();
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        var reading = {};
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in monthly readings");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in monthly readings");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
@@ -568,58 +553,57 @@ module.exports = function(Designatedmeter) {
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
-                let xhr = new XMLHttpRequest();
-                let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
-                // console.log('serviceToCall:', serviceToCall);
-                xhr.open('GET', serviceToCall);
-                setTimeout(() => {
-                    if (xhr.readyState < 3) {
-                        xhr.abort();
-                    }
-                }, 4000);
-                xhr.onload = function(){
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                        let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
-                        if(dp){
-                            dp = dp.toFixed(2);
-                            meter.latestValues.lastUpdated = new Date();
-                            if(!meter.latestValues.dp){
-                                meter.latestValues.dp = {};
-                                meter.latestValues.dp.value = dp;
-                            } else {
-                                meter.latestValues.dp.value = dp;
-                            }
-    
-                            let company_id = meter.company().id;
-                            meter.unsetAttribute("company");
-                            meter.unsetAttribute("meter");
-                            meter.save(function(err, dsgMeter){
-                                let socketData = {
-                                    socketEvent: 'odometerReading',
-                                    data: meter.latestValues.dp
-                                };
-                                socketData = JSON.stringify(socketData);
-                                Socket.sendMessageToCompanyUsers(company_id, socketData);
-                                next();
-                            });
-                        } else {
-                            next();
+                const services = meter.services();
+                async.each(services, (service, nextService) => {
+                    let xhr = new XMLHttpRequest();
+                    let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
+
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
                         }
-                    } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                        var reading = {};
-                        next();
-                    }
-                };
-                xhr.onerror = function() {
-                    console.log("Something went wrong");
-                    if (meters.length === 1) next({ status: 500, message: 'Error al leer medidor' });
+                    }, 4000);
+                    xhr.onload = function(){
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
+                            if(dp){
+                                dp = dp.toFixed(2);
+                                
+                                let company_id = meter.company().id;
+
+                                service.updateAttribute("dp", dp, (err, updated) => {
+                                    if (err) return nextService(err)
+                                    let socketData = {
+                                        socketEvent: 'odometerReading',
+                                        data: updated.dp,
+                                        service: updated.serviceName
+                                    };
+                                    socketData = JSON.stringify(socketData);
+                                    Socket.sendMessageToCompanyUsers(company_id, socketData);
+                                    nextService();
+                                });
+                            } else {
+                                nextService();
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            var reading = {};
+                            nextService();
+                        }
+                    };
+                    xhr.onerror = function() {
+                        if (meters.length === 1) nextService({ status: 500, message: 'Error al leer medidor' });
+                        else nextService();
+                    };
+                    xhr.onabort = function () {
+                        console.error("The request timed out in odometerReadings");
+                    };
+                    xhr.send();
+                }, function(errService) {
+                    if (errService) next(errService)
                     else next();
-                };
-                xhr.onabort = function () {
-                    console.error("The request timed out in odometerReadings");
-                };
-                xhr.send();
+                });
             }, function(_err) {
                 if(_err) {
                     console.log('error reading', _err);
