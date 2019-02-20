@@ -74,7 +74,13 @@ module.exports = function(Designatedmeter) {
                                 }
                                 iterable.map((item) => {
                                     let key = 0;
-                                    for (let device of item.field) {
+                                    let itemIterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        itemIterable.push(item.field);
+                                    } else {
+                                        itemIterable = item.field;
+                                    }
+                                    for (let device of itemIterable) {
                                         const name = devicesDescription[device.id._text.split(".")[0]];
                                         const value = parseInt(device.value._text);
                                         if (!read[key]) {
@@ -168,8 +174,14 @@ module.exports = function(Designatedmeter) {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             let summatory = 0;
-                            if(reading.recordGroup.record){
-                                reading.recordGroup.record.field.map(item=> {
+                            if(reading.recordGroup && reading.recordGroup.record){
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record.field)) {
+                                    iterable.push(reading.recordGroup.record.field);
+                                } else {
+                                    iterable = reading.recordGroup.record.field;
+                                }
+                                iterable.map(item=> {
                                     summatory += parseFloat(item.value._text);
                                 });
                                 let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
@@ -473,8 +485,13 @@ module.exports = function(Designatedmeter) {
                                 if (Array.isArray(iterate)) {
                                     iterate = iterate[0];
                                 }
-                                Object.keys(iterate.field).forEach(function(key) {
-                                    summatory += parseInt(iterate.field[key].value._text);
+                                if (!Array.isArray(iterate.field)) {
+                                    iterate = [iterate.field];
+                                } else {
+                                    iterate = iterate.field;
+                                }
+                                Object.keys(iterate).forEach(function(key) {
+                                    summatory += parseInt(iterate[key].value._text);
                                 });
                                 
                                 let consumption = parseInt(summatory);

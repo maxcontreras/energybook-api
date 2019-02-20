@@ -445,7 +445,7 @@ module.exports = function(Meter) {
                         if (xhr.readyState < 3) {
                             xhr.abort();
                         }
-                    }, 4000);
+                    }, 8000);
                     xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -714,7 +714,7 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                    const CFE_rates = await EDS.getCFERate(tmp_date);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
                                     const rate = CFE_rates.rate;
                                     const rate_type = CFE_rates.rate_type;
                                     let date = CFE_rates.date;

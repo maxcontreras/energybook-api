@@ -22,6 +22,10 @@
     "location": {
       "type": "object"
     },
+    "city": {
+      "type": "string",
+      "required": true
+    },
     "size": {
       "type": "string"
     },

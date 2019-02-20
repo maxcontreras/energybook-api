@@ -255,14 +255,15 @@ const getCFERateType = function(ISOdate) {
     return Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
 }
 
-const getCFERate = function(ISOdate) {
+const getCFERate = function(ISOdate, city) {
     let AdminValue = app.loopback.getModel('AdminValue');
     let date = moment(ISOdate).tz(timezone);
     let new_date = date.clone().startOf('month').format();
+    // console.log('Trying to call city ', city);
 
     const rate_type = getCFERateType(ISOdate);
     return new Promise((resolve, reject) => {
-        AdminValue.findByDate(new_date, (err, res) => {
+        AdminValue.findByDate(new_date, city, (err, res) => {
             if (err) reject(err);
             else {
                 resolve({
