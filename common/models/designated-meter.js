@@ -201,7 +201,7 @@ module.exports = function(Designatedmeter) {
 
                                 let company_id = meter.company().id;
 
-                                Meters.getDpReadingsByFilter(meter.meter_id, undefined, 0, {}, (err, res) => {
+                                Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 0, {}, (err, res) => {
                                     let maxDp = 0;
                                     res.forEach((dpReading) => {
                                         if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
@@ -506,7 +506,7 @@ module.exports = function(Designatedmeter) {
                                 monthlyReadings.consumption = consumption;
 
                                 let company_id = meter.company().id;
-                                Meters.getDpReadingsByFilter(meter.meter_id, undefined, 3, {}, (err, res) => {
+                                Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 3, {}, (err, res) => {
                                     let maxDp = 0;
                                     res.forEach((dpReading) => {
                                         if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
