@@ -774,9 +774,6 @@ module.exports = function(Meter) {
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
                                         read.cost = (sum*rate).toFixed(2);
                                         read.rate = rate_type;
-                                        if (read.rate === 'peak') {
-                                            // console.log(read.date, ' consumption is ', sum, ' and price is ', rate);
-                                        }
                                         values.push(read);
                                         Promise.resolve();
                                     }
