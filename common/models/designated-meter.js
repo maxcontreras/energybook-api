@@ -351,7 +351,7 @@ module.exports = function(Designatedmeter) {
             async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.each(services, (service, nextService) => {
-                    READINGS.fpReadings(meter, service, meters.length === 1, (err, readings) => {
+                    READINGS.fpReadings(meter, service, meters.length === 1, {}, (err, readings) => {
                         if (err) {
                             nextService(err);
                         } else if (readings) {
@@ -406,7 +406,7 @@ module.exports = function(Designatedmeter) {
             async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.each(services, (service, nextService) => {
-                    READINGS.monthlyReadings(meter, service, meters.length === 1, (err, monthlyReadings) => {
+                    READINGS.monthlyReadings(meter, service, meters.length === 1, {}, (err, monthlyReadings) => {
                         if (err) {
                             nextService(err);
                         } else if (monthlyReadings) {

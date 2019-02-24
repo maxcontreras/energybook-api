@@ -2,6 +2,7 @@
 
 const Converter = require('xml-js');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const moment = require('moment-timezone');
 const Constants = require('../constants.json');
 const app = require('../server');
 const Meters = app.loopback.getModel('Meter');
@@ -21,9 +22,17 @@ const fpFormula = function(P, Q) {
     return P/Math.sqrt(Math.pow(P, 2) + Math.pow(Q, 2));
 }
 
-const fpReadings = function(meter, service, isSingleCompany, cb) {
+const fpReadings = function(meter, service, isSingleCompany, custom_dates, cb) {
     let xhr = new XMLHttpRequest();
-    var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+    let dates;
+    if (custom_dates.from && custom_dates.until) {
+        dates = EDS.dateFilterSetup(Constants.Meters.filters.custom, custom_dates);
+        const daysInMonth = moment(custom_dates.from).daysInMonth();
+        dates.period = daysInMonth*86400;
+        dates.day = moment(custom_dates.from).date();
+    } else {
+        dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+    }
     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end=" +dates.end 
     service.devices.forEach((device, index) => {
         if (index !== 0) {
@@ -79,9 +88,17 @@ const fpReadings = function(meter, service, isSingleCompany, cb) {
     xhr.send();
 }
 
-const monthlyReadings = function(meter, service, isSingleCompany, cb) {
+const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, cb) {
     let xhr = new XMLHttpRequest();
-    var dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+    let dates;
+    if (custom_dates.from && custom_dates.until) {
+        dates = EDS.dateFilterSetup(Constants.Meters.filters.custom, custom_dates);
+        const daysInMonth = moment(custom_dates.from).daysInMonth();
+        dates.period = daysInMonth*86400;
+        dates.day = moment(custom_dates.from).date();
+    } else {
+        dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
+    }
     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
         +dates.end;
     service.devices.forEach((device, index) => {
@@ -125,7 +142,6 @@ const monthlyReadings = function(meter, service, isSingleCompany, cb) {
                 monthlyReadings.distribution = distribution;
                 monthlyReadings.consumption = consumption;
 
-                let company_id = meter.company().id;
                 Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 3, {}, (err, res) => {
                     let maxDp = 0;
                     res.forEach((dpReading) => {

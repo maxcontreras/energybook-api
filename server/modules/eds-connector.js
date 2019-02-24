@@ -201,7 +201,6 @@ var dateFilterSetup = function dateFilterSetup(filter, dates = {}){
             date.end = parseDate(moment().endOf('year').add(6,"hours").format('YYYY-MM-DD HH:mm:ss'));
             date.period = 86400;
             return date;
-        // TODO: Update the following when the time comes
         case Constants.Meters.filters.custom:
             date.begin = parseDate(moment(dates.from).startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
             date.end = parseDate(moment(dates.until).endOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));
