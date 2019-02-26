@@ -390,7 +390,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, filter, custom_dates, cb) {
+    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, service, filter, custom_dates, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -402,6 +402,9 @@ module.exports = function(Meter) {
                     },
                     {
                         relation: 'meter'
+                    },
+                    {
+                        relation: 'services'
                     }
                 ],
                 where: {
@@ -429,23 +432,24 @@ module.exports = function(Meter) {
                         dates.period = 900;
                     }
 
-                    let service = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
-                    if (device) {
-                        service += "?var=" +device+ ".DP";
-                    } else {
-                        meter.devices.forEach((device, index) => {
+                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    if (service !== '') {
+                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                        selectedService.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ device.name + ".DP";
+                                serviceToCall += "?var="+ device.name + ".DP";
                             }
                         });
+                    } else {
+                        serviceToCall += "?var=" +device+ ".DP";
                     }
-                    service += "?period=" +dates.period;
-                    xhr.open('GET', service);
+                    serviceToCall += "?period=" +dates.period;
+                    xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
                             xhr.abort();
                         }
-                    }, 4000);
+                    }, 8000);
                     xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -510,7 +514,8 @@ module.exports = function(Meter) {
         'getDpReadingsByFilter', {
             accepts: [
                 { arg: 'id', type: 'string' },
-                { arg: 'device', type: 'string', required: false, default: '' },
+                { arg: 'device', type: 'string'},
+                { arg: 'service', type: 'string'},
                 { arg: 'filter', type: 'number' },
                 { arg: 'custom_dates', type: 'object' }
             ],
@@ -518,7 +523,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, filter, interval, custom_dates, cb){
+    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, service, filter, interval, custom_dates, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -530,6 +535,9 @@ module.exports = function(Meter) {
                     },
                     {
                         relation: 'meter'
+                    },
+                    {
+                        relation: 'services'
                     }
                 ],
                 where: {
@@ -551,18 +559,19 @@ module.exports = function(Meter) {
                         dates.period = interval;
                     }
 
-                    let service = meter.hostname+API_PREFIX+"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
-                    if (device) {
-                        service += "?var=" +device+ ".EPimp";
-                    } else {
-                        meter.devices.forEach((device, index) => {
+                    let serviceToCall = meter.hostname+API_PREFIX+"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
+                    if (service !== '') {
+                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                        selectedService.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ device.name + ".EPimp";
+                                serviceToCall += "?var="+ device.name + ".EPimp";
                             }
                         });
+                    } else {
+                        serviceToCall += "?var=" +device+ ".EPimp";
                     }
-                    service += "?period=" +dates.period;
-                    xhr.open('GET', service);
+                    serviceToCall += "?period=" +dates.period;
+                    xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
                             xhr.abort();
@@ -626,6 +635,7 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
+                { arg: 'service', type: 'string'},
                 { arg: 'filter', type: 'number' },
                 { arg: 'interval', type: 'number' },
                 { arg: 'custom_dates', type: 'object' }
@@ -634,7 +644,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, filter, interval, custom_dates, cb) {
+    Meter.getConsumptionCostsByFilter = function getConsumptionCostsByFilter(id, device, service, filter, interval, custom_dates, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
@@ -646,6 +656,9 @@ module.exports = function(Meter) {
                     },
                     {
                         relation: 'meter'
+                    },
+                    {
+                        relation: 'services'
                     }
                 ],
                 where: {
@@ -663,18 +676,19 @@ module.exports = function(Meter) {
                     
                     // Set period fixed to 1 hour
                     dates.period = 3600;
-                    let service = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
-                    if (device) {
-                        service += "?var=" + device + ".EPimp";
-                    } else {
-                        meter.devices.forEach((device, index) => {
+                    let serviceToCall = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
+                    if (service !== '') {
+                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                        selectedService.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                service += "?var="+ device.name + ".EPimp";
+                                serviceToCall += "?var="+ device.name + ".EPimp";
                             }
                         });
+                    } else {
+                        serviceToCall += "?var=" + device + ".EPimp";
                     }
-                    service += "?period=" + dates.period;
-                    xhr.open('GET', service);
+                    serviceToCall += "?period=" + dates.period;
+                    xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
                             xhr.abort();
@@ -714,7 +728,7 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                    const CFE_rates = await EDS.getCFERate(tmp_date);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
                                     const rate = CFE_rates.rate;
                                     const rate_type = CFE_rates.rate_type;
                                     let date = CFE_rates.date;
@@ -760,9 +774,6 @@ module.exports = function(Meter) {
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
                                         read.cost = (sum*rate).toFixed(2);
                                         read.rate = rate_type;
-                                        if (read.rate === 'peak') {
-                                            // console.log(read.date, ' consumption is ', sum, ' and price is ', rate);
-                                        }
                                         values.push(read);
                                         Promise.resolve();
                                     }
@@ -811,6 +822,7 @@ module.exports = function(Meter) {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string' },
+                { arg: 'service', type: 'string'},
                 { arg: 'filter', type: 'number' },
                 { arg: 'interval', type: 'number' },
                 { arg: 'custom_dates', type: 'object' }

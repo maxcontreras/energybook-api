@@ -6,18 +6,19 @@ moment.tz.setDefault("America/Mexico_City");
 
 module.exports = function(AdminValue) {
 
-    AdminValue.findByDate = function findByDate(date, cb) {
+    AdminValue.findByDate = function findByDate(date, city, cb) {
         let searchDate = moment(date).format();
         let endDate = moment(searchDate).add(1, 'day').format();
-        if (searchDate === 'Invalid date') {
-            cb({ status: 400, message: 'Invalid date' })
+        if (searchDate === 'Invalid date' || city === '') {
+            cb({ status: 400, message: 'Invalid date or city' })
         } else {
             AdminValue.findOne(
                 {
                     where: {
                         and: [
                             {"date": {"gte": new Date(searchDate)}},
-                            {"date": {"lt": new Date(endDate)}}
+                            {"date": {"lt": new Date(endDate)}},
+                            {"city": city}
                         ]
                     }
                 }
@@ -41,14 +42,15 @@ module.exports = function(AdminValue) {
     AdminValue.remoteMethod(
         'findByDate', {
             accepts: [
-                { arg: 'date', type: 'string' }
+                { arg: 'date', type: 'string' },
+                { arg: 'city', type: 'string' }
             ],
             returns: { arg: 'cfeValue', type: 'object' }
         }
     )
 
 
-    AdminValue.createOrUpdatePrices = function createOrUpdatePrices(date, payload, cb) {
+    AdminValue.createOrUpdatePrices = function createOrUpdatePrices(date, city, payload, cb) {
         let searchDate = moment(date).format();
         let endDate = moment(searchDate).add(1, 'day').format();
         if (searchDate === 'Invalid date' ||
@@ -64,7 +66,8 @@ module.exports = function(AdminValue) {
                     where: {
                         and: [
                             {"date": {"gte": new Date(searchDate)}},
-                            {"date": {"lt": new Date(endDate)}}
+                            {"date": {"lt": new Date(endDate)}},
+                            {"city": city}
                         ]
                     }
                 }
@@ -76,12 +79,13 @@ module.exports = function(AdminValue) {
                     value.capacityPrice = payload.capacity;
                     value.distributionPrice = payload.distribution;
                     value.save((err, newVal) => {
-                        if (err) return cb({ status: 500, message: "Data could not be saved" });
+                        if (err) return cb({ status: 500, message: "CFE data could not be saved" });
                         cb(null, newVal);
                     });
                 } else {
                     let obj = {
                         date: new Date(searchDate),
+                        city,
                         basePrice: payload.base,
                         middlePrice: payload.middle,
                         peakPrice: payload.peak,
@@ -102,6 +106,7 @@ module.exports = function(AdminValue) {
         'createOrUpdatePrices', {
             accepts: [
                 { arg: 'date', type: 'string' },
+                { arg: 'city', type: 'string' },
                 { arg: 'payload', type: 'object' }
             ],
             returns: { arg: 'cfeValue', type: 'object' }

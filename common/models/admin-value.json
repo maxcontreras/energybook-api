@@ -11,6 +11,10 @@
         "type": "date",
         "required": true
       },
+      "city": {
+        "type": "string",
+        "required": true
+      },
       "basePrice": {
         "type": "number",
         "required": true,
