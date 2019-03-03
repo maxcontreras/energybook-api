@@ -91,38 +91,6 @@ module.exports = function(Meter) {
         returns: { arg: 'meters', type: 'object' }
     });
 
-    Meter.getAssigned = function getAssigned(id, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        DesignatedMeter.find({
-            include: [
-                {
-                    relation: 'company'
-                },
-                {
-                    relation: 'meter'
-                }
-            ],
-            where: {
-                and: [
-                    { meter_id: id },
-                    { active: 1 }
-                ]
-            },
-        }, function(err, meter){
-            if(err) cb({status: 400, message: "Error al traer medidor asignado"}, null);
-            if(meter){
-                cb(null, meter);
-            }
-        });
-    };
-
-    Meter.remoteMethod('getAssigned', {
-        accepts: [
-            { arg: 'id', type: 'string' }
-        ],
-        returns: { arg: 'meters', type: 'object' }
-    });
-
     Meter.getDeviceInfo = function getDeviceInfo(id, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
@@ -836,8 +804,13 @@ module.exports = function(Meter) {
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
                     let service = meter.hostname+ API_PREFIX +"devices.xml";
-                    xhr.open('GET', service, false);
-                    xhr.onreadystatechange = function(){
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             meter.devices = [];
@@ -853,6 +826,12 @@ module.exports = function(Meter) {
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
+                    };
+                    xhr.onerror = function() {
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("costs request timed out");
                     };
                     xhr.send();
                 }

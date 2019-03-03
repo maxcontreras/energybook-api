@@ -11,6 +11,21 @@
       "type": "string",
       "required": true
     },
+    "hostname": {
+      "type": "string",
+      "required": true
+    },
+    "summatory_device": {
+      "type": "string"
+    },
+    "max_value": {
+      "type": "number",
+      "required": true
+    },
+    "min_value": {
+      "type": "number",
+      "required": true
+    },
     "active": {
       "type": "number",
       "required": true,
