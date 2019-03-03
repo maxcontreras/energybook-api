@@ -116,6 +116,31 @@ module.exports = function(Company) {
         }
     );
 
+    Company.addUser = function addUser(companyId, user, cb) {
+        Company.findById(companyId, (err, company) => {
+            if (err) return cb(err);
+            company.users.create({
+                ...user,
+                phone: company.phone,
+                created_at: new Date(),
+                updated_at: new Date()
+            }, (err, usr) => {
+                if (err) cb(err);
+                else cb(null, usr);
+            });
+        });
+    }
+
+    Company.remoteMethod(
+        'addUser', {
+            accepts: [
+                { arg: 'companyId', type: 'string' },
+                { arg: 'user', type: 'object' }
+            ],
+            returns: { arg: 'user', type: 'object' }
+        }
+    )
+
     Company.addUsers = function addUsers(data, cb) {
         if(!data.company.id){
             cb({status: 400, message: "ID de compañía faltante"}, null);
