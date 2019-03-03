@@ -28,55 +28,6 @@ const timezone = 'America/Mexico_City';
 
 module.exports = function(Meter) {
 
-    Meter.getOwnerCompany = function getOwnerCompany(meter_id, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-
-        if(!meter_id){ cb({status: 400, message: 'Medidor no encontrado'}); }
-        else {
-            Meter.findById(meter_id, function(err, meter){
-                if(!meter){ cb({status: 400, message: 'Medidor no encontrado'}); }
-                else {
-                    DesignatedMeter.findOne({
-                        where: {
-                            and: [
-                                { meter_id: meter.id },
-                                { active: 1 }
-                            ]
-                        },
-                        include: [
-                            {
-                                relation: 'company'
-                            },
-                            {
-                                relation: 'meter'
-                            }
-                        ]
-                    }, function (err, designatedMeter){
-                        if(!designatedMeter){ cb({status: 400, message: 'Medidor sin vinculación a compañía'}); }
-                        else {
-                            cb(null, {
-                                name: designatedMeter.company().company_name,
-                                legal_name: designatedMeter.company().legal_name,
-                                meter_status: designatedMeter.active,
-                                meter_serial_number: designatedMeter.meter().serial_number,
-                                hostname: designatedMeter.hostname,
-                            });
-                        }
-                    });
-                }
-            });
-        }
-    };
-
-    Meter.remoteMethod(
-        'getOwnerCompany', {
-            accepts: [
-                { arg: 'meter_id', type: 'string' }
-            ],
-            returns: { arg: 'company', type: 'object' }
-        }
-    );
-
     Meter.unassignedMeters = function unassignedMeters(cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         Meter.find({
