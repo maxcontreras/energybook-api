@@ -886,13 +886,14 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.updateDesignatedMeter = function updateDesignatedMeter(data, cb) {
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        let modelObject = data;
+        let modelObject = meter;
         if(!modelObject || !modelObject.meter_id){
-            cb({status: 400, message: "Parametros faltantes"}, null);
+            cb({status: 400, message: "Parametros faltantes"});
         } else {
             DesignatedMeter.findOne({
+                include: ['services'],
                 where: {
                     and: [
                         { meter_id: modelObject.meter_id },
@@ -900,7 +901,9 @@ module.exports = function(Meter) {
                     ]
                 }
             }, function(err, meter){
-                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"}, null);
+                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"});
+                const meterServices = meter.services();
+                meter.unsetAttribute('services');
                 if(meter){
                     meter.device_name = modelObject.device_name;
                     meter.summatory_device = modelObject.summatory_device,
@@ -910,8 +913,17 @@ module.exports = function(Meter) {
                     meter.company_id = modelObject.company_id;
                     meter.updated_at = new Date();
                     meter.save(function(_err, dsgMeter){
-                        if(_err) cb({status: 400, message: "Error al guardar los nuevos datos"}, null);
-                        else cb(null, dsgMeter);
+                        if(_err) return cb({status: 400, message: "Error al guardar los nuevos datos"});
+                        async.mapSeries(meterServices, (serv, next) => {
+                            serv.devices = meter.devices.filter((device, index) => index === 0 || services[serv.serviceName].includes(device.name));
+                            serv.save((err, updated) => {
+                                if (err) next(err);
+                                else next(null, updated);
+                            });
+                        }, (err, updatedServices) => {
+                            if (err) return cb({status: 400, message: "Error al guardar los servicios"});
+                            cb(null, updatedServices);
+                        });
                     });
                 }
             });
@@ -921,7 +933,8 @@ module.exports = function(Meter) {
     Meter.remoteMethod(
         'updateDesignatedMeter', {
             accepts: [
-                { arg: 'data', type: 'object' }
+                { arg: 'meter', type: 'object' },
+                { arg: 'services', type: 'object' }
             ],
             returns: { arg: 'response', type: 'object', root: true }
         }
