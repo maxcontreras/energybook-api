@@ -47,38 +47,60 @@ module.exports = function(Company) {
         }
     );
 
-    Company.designateMeter = function designateMeter(data, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        var Meters = app.loopback.getModel('Meter');
-        let modelObject = data;
-        if(!modelObject || !modelObject.company_id || !modelObject.meter_id){
+    Company.addDesignatedMeter = function addDesignatedMeter(data, cb) {
+        const Services = app.loopback.getModel('Service');
+        const DesignatedMeters = app.loopback.getModel('DesignatedMeter');
+        const Meters = app.loopback.getModel('Meter');
+        if(!data || !data.company_id){
             cb({status: 400, message: "Parametros faltantes"}, null);
         } else {
-            DesignatedMeter.create({
-                device_name: modelObject.device_name,
-                summatory_device: Constants.Meters.common_names.summatory_device,
-                hostname: modelObject.hostname,
-                max_value: parseInt(modelObject.max_value),
-                min_value: parseInt(modelObject.min_value),
-                latestValues: {},
-                active: 1,
-                meter_id: modelObject.meter_id,
-                company_id: modelObject.company_id,
-                created_at: new Date()
-            }, function (err, designatedMeter){
-                if(err) cb({status: 400, message: "Error al asignar medidor"}, null);
-                else {
-                    Meters.storeConnectedDevices(designateMeter.meter_id, (err, met) => {
-                        if (err) return cb(err, null);
-                        cb(null, 'Medidor '+ designatedMeter.meter_id +' asignado correctamente');
-                    });
-                }
+            Meters.create({
+                serial_number: data.serial_number,
+                created_at: new Date(),
+                updated_at: new Date()
+            }, (err, newMeter) => {
+                if (err) return {status: 400, message: "Error al crear medidor"};
+                newMeter.designatedMeters.create({
+                    device_name: data.device_name,
+                    hostname: data.hostname,
+                    summatory_device: Constants.Meters.common_names.summatory_device,
+                    max_value: parseInt(data.max_value),
+                    min_value: parseInt(data.min_value),
+                    company_id: data.company_id,
+                    created_at: new Date()
+                }, (err, dsgMeter) => {
+                    if (err) {
+                        Meters.destroyById(newMeter.id, () => {
+                            return cb({status: 400, message: "Error al crear medidor designado"});
+                        });
+                    } else {
+                        Meters.storeConnectedDevices(dsgMeter.id, (err, met) => {
+                            if (err) {
+                                Meters.destroyById(newMeter.id, () => {
+                                    DesignatedMeters.destroyById(dsgMeter.id, () => {
+                                        return cb(err);
+                                    });
+                                });
+                            } else {
+                                Services.setUpBasicService(dsgMeter.id, err => {
+                                    if (err) {
+                                        Meters.destroyById(newMeter.id, () => {
+                                            DesignatedMeters.destroyById(dsgMeter.id, () => {
+                                                return cb({status: 400, message: "No se pudo crear el servicio para el medidor"});
+                                            });
+                                        });
+                                    } else cb(null, 'Medidor '+ dsgMeter.id +' asignado correctamente');
+                                });
+                            }
+                        });
+                    }
+                });
             });
         }
     };
 
     Company.remoteMethod(
-        'designateMeter', {
+        'addDesignatedMeter', {
             accepts: [
                 { arg: 'data', type: 'object' }
             ],
@@ -115,6 +137,31 @@ module.exports = function(Company) {
             returns: { arg: 'response', type: 'string', root: true }
         }
     );
+
+    Company.addUser = function addUser(companyId, user, cb) {
+        Company.findById(companyId, (err, company) => {
+            if (err) return cb(err);
+            company.users.create({
+                ...user,
+                phone: company.phone,
+                created_at: new Date(),
+                updated_at: new Date()
+            }, (err, usr) => {
+                if (err) cb(err);
+                else cb(null, usr);
+            });
+        });
+    }
+
+    Company.remoteMethod(
+        'addUser', {
+            accepts: [
+                { arg: 'companyId', type: 'string' },
+                { arg: 'user', type: 'object' }
+            ],
+            returns: { arg: 'user', type: 'object' }
+        }
+    )
 
     Company.addUsers = function addUsers(data, cb) {
         if(!data.company.id){

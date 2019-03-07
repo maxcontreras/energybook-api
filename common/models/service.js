@@ -58,11 +58,17 @@ module.exports = function(Service) {
         }
     )
 
-    Service.setUpBasicService = function setUpBasicService(cb) {
+    Service.setUpBasicService = function setUpBasicService(id, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        DesignatedMeter.find({
-                include: ['services']
-            })
+        const filter = {
+            include: ['services']
+        }
+        if (id) {
+            filter.where = {
+                id
+            }
+        }
+        DesignatedMeter.find(filter)
             .then(meters => {
                 meters.forEach(meter => {
                     let services = meter.services();
@@ -79,12 +85,16 @@ module.exports = function(Service) {
                     }
                 });
                 cb(null, 'OK');
+            }).catch(err => {
+                console.log(err);
             });
     }
 
     Service.remoteMethod(
         'setUpBasicService', {
-            accepts: [],
+            accepts: [
+                { arg: 'id', type: 'string' }
+            ],
             returns: {arg: 'result', type: 'string'}
         }
     )

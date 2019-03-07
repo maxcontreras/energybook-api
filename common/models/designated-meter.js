@@ -286,8 +286,14 @@ module.exports = function(Designatedmeter) {
                                 reading.recordGroup.record.map( (item, key) => {
                                     let read = {};
                                     if(item.field){
+                                        let iterable = [];
+                                        if (!Array.isArray(item.field)) {
+                                            iterable.push(item.field);
+                                        } else {
+                                            iterable = item.field;
+                                        }
                                         read.value = 0;
-                                        item.field.map(device => {
+                                        iterable.map(device => {
                                             read.value += parseFloat(device.value._text);
                                         });
                                         read.value = read.value.toFixed(2);

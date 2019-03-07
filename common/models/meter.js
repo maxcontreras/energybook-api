@@ -28,55 +28,6 @@ const timezone = 'America/Mexico_City';
 
 module.exports = function(Meter) {
 
-    Meter.getOwnerCompany = function getOwnerCompany(meter_id, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-
-        if(!meter_id){ cb({status: 400, message: 'Medidor no encontrado'}); }
-        else {
-            Meter.findById(meter_id, function(err, meter){
-                if(!meter){ cb({status: 400, message: 'Medidor no encontrado'}); }
-                else {
-                    DesignatedMeter.findOne({
-                        where: {
-                            and: [
-                                { meter_id: meter.id },
-                                { active: 1 }
-                            ]
-                        },
-                        include: [
-                            {
-                                relation: 'company'
-                            },
-                            {
-                                relation: 'meter'
-                            }
-                        ]
-                    }, function (err, designatedMeter){
-                        if(!designatedMeter){ cb({status: 400, message: 'Medidor sin vinculación a compañía'}); }
-                        else {
-                            cb(null, {
-                                name: designatedMeter.company().company_name,
-                                legal_name: designatedMeter.company().legal_name,
-                                meter_status: designatedMeter.active,
-                                meter_serial_number: designatedMeter.meter().serial_number,
-                                hostname: designatedMeter.hostname,
-                            });
-                        }
-                    });
-                }
-            });
-        }
-    };
-
-    Meter.remoteMethod(
-        'getOwnerCompany', {
-            accepts: [
-                { arg: 'meter_id', type: 'string' }
-            ],
-            returns: { arg: 'company', type: 'object' }
-        }
-    );
-
     Meter.unassignedMeters = function unassignedMeters(cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         Meter.find({
@@ -136,38 +87,6 @@ module.exports = function(Meter) {
     Meter.remoteMethod('getActivesAssigned', {
         accepts: [
             { arg: 'company_id', type: 'string',  required: false, default: '' }
-        ],
-        returns: { arg: 'meters', type: 'object' }
-    });
-
-    Meter.getAssigned = function getAssigned(id, cb) {
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        DesignatedMeter.find({
-            include: [
-                {
-                    relation: 'company'
-                },
-                {
-                    relation: 'meter'
-                }
-            ],
-            where: {
-                and: [
-                    { meter_id: id },
-                    { active: 1 }
-                ]
-            },
-        }, function(err, meter){
-            if(err) cb({status: 400, message: "Error al traer medidor asignado"}, null);
-            if(meter){
-                cb(null, meter);
-            }
-        });
-    };
-
-    Meter.remoteMethod('getAssigned', {
-        accepts: [
-            { arg: 'id', type: 'string' }
         ],
         returns: { arg: 'meters', type: 'object' }
     });
@@ -885,8 +804,13 @@ module.exports = function(Meter) {
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
                 if(meter){
                     let service = meter.hostname+ API_PREFIX +"devices.xml";
-                    xhr.open('GET', service, false);
-                    xhr.onreadystatechange = function(){
+                    xhr.open('GET', service);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 4000);
+                    xhr.onload = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             meter.devices = [];
@@ -902,6 +826,12 @@ module.exports = function(Meter) {
                         } else if (xhr.readyState === 4 && xhr.status !== 200) {
                             cb({status: 400, message:"Error trying to read meter"}, null);
                         }
+                    };
+                    xhr.onerror = function() {
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("costs request timed out");
                     };
                     xhr.send();
                 }
@@ -956,13 +886,14 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.updateDesignatedMeter = function updateDesignatedMeter(data, cb) {
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-        let modelObject = data;
+        let modelObject = meter;
         if(!modelObject || !modelObject.meter_id){
-            cb({status: 400, message: "Parametros faltantes"}, null);
+            cb({status: 400, message: "Parametros faltantes"});
         } else {
             DesignatedMeter.findOne({
+                include: ['services'],
                 where: {
                     and: [
                         { meter_id: modelObject.meter_id },
@@ -970,7 +901,9 @@ module.exports = function(Meter) {
                     ]
                 }
             }, function(err, meter){
-                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"}, null);
+                if(err || !meter) cb({status: 400, message: "Error medidor no encontrado"});
+                const meterServices = meter.services();
+                meter.unsetAttribute('services');
                 if(meter){
                     meter.device_name = modelObject.device_name;
                     meter.summatory_device = modelObject.summatory_device,
@@ -980,8 +913,17 @@ module.exports = function(Meter) {
                     meter.company_id = modelObject.company_id;
                     meter.updated_at = new Date();
                     meter.save(function(_err, dsgMeter){
-                        if(_err) cb({status: 400, message: "Error al guardar los nuevos datos"}, null);
-                        else cb(null, dsgMeter);
+                        if(_err) return cb({status: 400, message: "Error al guardar los nuevos datos"});
+                        async.mapSeries(meterServices, (serv, next) => {
+                            serv.devices = meter.devices.filter((device, index) => index === 0 || services[serv.serviceName].includes(device.name));
+                            serv.save((err, updated) => {
+                                if (err) next(err);
+                                else next(null, updated);
+                            });
+                        }, (err, updatedServices) => {
+                            if (err) return cb({status: 400, message: "Error al guardar los servicios"});
+                            cb(null, updatedServices);
+                        });
                     });
                 }
             });
@@ -991,7 +933,8 @@ module.exports = function(Meter) {
     Meter.remoteMethod(
         'updateDesignatedMeter', {
             accepts: [
-                { arg: 'data', type: 'object' }
+                { arg: 'meter', type: 'object' },
+                { arg: 'services', type: 'object' }
             ],
             returns: { arg: 'response', type: 'object', root: true }
         }
