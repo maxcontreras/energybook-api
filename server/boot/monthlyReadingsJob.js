@@ -7,9 +7,9 @@ var timezone = 'America/Mexico_City';
 
 
 var monthlyReadings = new CronJob('0,15,30,45 * * * *', function () {
-    console.log('Starting monthly readings job')
+    // console.log('Starting monthly readings job')
     DesignatedMeter.monthlyReadings(undefined, (err, res) => {
-        console.log('Finished monthly readings job')
+        // console.log('Finished monthly readings job')
         if (err) console.log("Error ", JSON.stringify(err, null, 2));
     });
 }, function () {

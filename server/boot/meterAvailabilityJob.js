@@ -7,7 +7,7 @@ const dns = require('dns');
 
 const timezone = 'America/Mexico_City';
 
-const meterAvailability = new CronJob('* * * * *', function () {
+const meterAvailability = new CronJob('*/5 * * * *', function () {
     DesignatedMeter.find({}, (err, meters) => {
         async.each(meters, (meter, next) => {
             const target = meter.hostname.replace('http://', '');

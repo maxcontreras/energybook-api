@@ -5,9 +5,9 @@ const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 const timezone = 'America/Mexico_City';
 
 var fpReadings = new CronJob('5,35 * * * *', function () {
-    console.log('Starting fp readings job')
+    // console.log('Starting fp readings job')
     DesignatedMeter.fpReadings(undefined, (err, res) => {
-        console.log('Finished fp readings job')
+        // console.log('Finished fp readings job')
         if (err) console.log("Error ", JSON.stringify(err, null, 2));
     });
 }, function () {
