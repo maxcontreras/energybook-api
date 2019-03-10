@@ -36,12 +36,12 @@ const timezone = 'America/Mexico_City';
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
-        let devicesDescription = {};
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.each(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
+                    let devicesDescription = {};
                     let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
                     service.devices.forEach((device, index) => {

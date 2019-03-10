@@ -223,6 +223,7 @@ var dateFilterSetup = function dateFilterSetup(filter, dates = {}){
             const daysInMonth = moment().daysInMonth();
             date.period = daysInMonth*86400;
             date.day = moment().date();
+            date.hour = moment().hour();
             return date;
         default:
             date.begin = parseDate(moment().startOf("day").add(6,"hours").format("YYYY-MM-DD HH:mm:ss"));

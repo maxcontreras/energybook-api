@@ -21,16 +21,12 @@ const meterAvailability = new CronJob('*/5 * * * *', function () {
                         console.log (target + ": " + error.toString ());
                         meter.updateAttribute(
                             'isAvailable',
-                            false, () => {
-                                next();
-                            });
+                            false, next);
                     }
                     else if (!error && !meter.isAvailable){
                         meter.updateAttribute(
                             'isAvailable',
-                            true, () => {
-                                next();
-                            });
+                            true, next);
                     } else {
                         next();
                     }
