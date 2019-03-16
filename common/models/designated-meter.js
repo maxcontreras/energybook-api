@@ -118,7 +118,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in consumption summary");
+                        console.error(`The request timed out in consumption summary in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -236,7 +236,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in daily readings");
+                        console.error(`The request timed out in daily readings in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -330,7 +330,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in epimpHistory");
+                        console.error(`The request timed out in epimpHistory in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -517,7 +517,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in odometerReadings");
+                        console.error(`The request timed out in odometerReadings in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
