@@ -133,25 +133,29 @@ const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, 
                 });
                 
                 let consumption = parseInt(summatory);
-                let distribution = ( consumption / ((dates.hour + dates.day * 24) * CHARGE_FACTOR) );
+                let commonFormula = ( consumption / ((dates.hour + dates.day * 24) * CHARGE_FACTOR) );
                 
-                distribution = distribution.toFixed(2);
+                commonFormula = commonFormula.toFixed(2);
                 consumption = consumption.toFixed(2);
 
                 let monthlyReadings = {};
 
-                monthlyReadings.distribution = distribution;
                 monthlyReadings.consumption = consumption;
 
                 Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 3, {}, (err, res) => {
-                    let maxDp = 0;
+                    let maxDpPeak = 0;
+                    let maxDpMonth = 0;
                     res.forEach((dpReading) => {
-                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
-                            maxDp = parseFloat(dpReading.value);
+                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDpPeak) {
+                            maxDpPeak = parseFloat(dpReading.value);
+                        }
+                        if (parseFloat(dpReading.value) > maxDpMonth) {
+                            maxDpMonth = parseFloat(dpReading.value);
                         }
                     });
 
-                    monthlyReadings.capacity = Math.min(maxDp, parseFloat(distribution));
+                    monthlyReadings.capacity = Math.min(maxDpPeak, parseFloat(commonFormula));
+                    monthlyReadings.distribution = Math.min(maxDpMonth, parseFloat(commonFormula));
 
                     cb(null, monthlyReadings);
                 });
