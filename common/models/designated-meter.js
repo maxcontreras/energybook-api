@@ -37,7 +37,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -146,7 +146,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -264,7 +264,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -358,7 +358,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     READINGS.fpReadings(meter, service, meters.length === 1, {}, (err, readings) => {
@@ -413,7 +413,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     READINGS.monthlyReadings(meter, service, meters.length === 1, {}, (err, monthlyReadings) => {
@@ -461,12 +461,16 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
-                    let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
-
+                    let serviceToCall = `${meter.hostname}${API_PREFIX}values.xml`;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+ device.name + ".DP";
+                        }
+                    });
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -476,8 +480,15 @@ module.exports = function(Designatedmeter) {
                     xhr.onload = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
-                            if(dp){
+                            let iterable = [];
+                            if (!Array.isArray(reading.values.variable)) {
+                                iterable.push(reading.values.variable);
+                            } else {
+                                iterable = reading.values.variable;
+                            }
+                            let dp = iterable.reduce((prev, curr) => prev + parseFloat(curr.value._text), 0);
+                            dp = parseFloat(dp / 1000);
+                            if(dp) {
                                 dp = dp.toFixed(2);
                                 
                                 let company_id = meter.company().id;
