@@ -180,17 +180,16 @@ module.exports = function(Designatedmeter) {
                                 iterable.map(item=> {
                                     summatory += parseFloat(item.value._text);
                                 });
-                                let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
+                                let commonFormula = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
                                 let consumption = summatory
-                                let distributionCharge = distribution * Constants.CFE.values.distribution_price;
-                                distribution = distribution.toFixed(2);
+                                let distributionCharge = commonFormula * Constants.CFE.values.distribution_price;
+                                commonFormula = commonFormula.toFixed(2);
                                 distributionCharge = distributionCharge.toFixed(2);
                                 consumption = consumption.toFixed(2);
 
                                 let dailyReadings = {};
                                 dailyReadings.lastUpdated = moment().format();
 
-                                dailyReadings.distribution = distribution;
                                 dailyReadings.chargeDistribution = distributionCharge;
 
                                 dailyReadings.consumption = consumption;
@@ -198,13 +197,18 @@ module.exports = function(Designatedmeter) {
                                 let company_id = meter.company().id;
 
                                 Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 0, {}, (err, res) => {
-                                    let maxDp = 0;
+                                    let maxDpPeak = 0;
+                                    let maxDpMonth = 0;
                                     res.forEach((dpReading) => {
-                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
-                                            maxDp = parseFloat(dpReading.value);
+                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDpPeak) {
+                                            maxDpPeak = parseFloat(dpReading.value);
+                                        }
+                                        if (parseFloat(dpReading.value) > maxDpMonth) {
+                                            maxDpMonth = parseFloat(dpReading.value);
                                         }
                                     });
-                                    dailyReadings.capacity = Math.min(maxDp, parseFloat(distribution));
+                                    dailyReadings.capacity = Math.min(maxDpPeak, parseFloat(commonFormula));
+                                    dailyReadings.distribution = Math.min(maxDpMonth, parseFloat(commonFormula));
 
                                     service.updateAttribute(
                                         "dailyReadings",
