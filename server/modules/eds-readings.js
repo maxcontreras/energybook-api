@@ -95,7 +95,8 @@ const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, 
         dates = EDS.dateFilterSetup(Constants.Meters.filters.custom, custom_dates);
         const daysInMonth = moment(custom_dates.from).daysInMonth();
         dates.period = daysInMonth*86400;
-        dates.day = moment(custom_dates.from).date();
+        dates.day = moment(custom_dates.until).date();
+        dates.hour = 0;
     } else {
         dates = EDS.dateFilterSetup(Constants.Meters.filters.monthAVG);
     }
@@ -132,7 +133,7 @@ const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, 
                 });
                 
                 let consumption = parseInt(summatory);
-                let distribution = ( consumption / (DEFAULT_HOURS * dates.day * CHARGE_FACTOR) );
+                let distribution = ( consumption / ((dates.hour + dates.day * 24) * CHARGE_FACTOR) );
                 
                 distribution = distribution.toFixed(2);
                 consumption = consumption.toFixed(2);

@@ -18,6 +18,10 @@
     "summatory_device": {
       "type": "string"
     },
+    "isAvailable": {
+      "type": "boolean",
+      "default": false
+    },
     "max_value": {
       "type": "number",
       "required": true

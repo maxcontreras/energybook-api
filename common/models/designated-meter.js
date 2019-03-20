@@ -36,12 +36,12 @@ const timezone = 'America/Mexico_City';
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
-        let devicesDescription = {};
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
+                    let devicesDescription = {};
                     let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
                     service.devices.forEach((device, index) => {
@@ -146,9 +146,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
                     var dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
                     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="
@@ -260,9 +260,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
                     let dates = EDS.dateFilterSetup(Constants.Meters.filters.month);
                     let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
@@ -354,9 +354,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     READINGS.fpReadings(meter, service, meters.length === 1, {}, (err, readings) => {
                         if (err) {
                             nextService(err);
@@ -409,9 +409,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     READINGS.monthlyReadings(meter, service, meters.length === 1, {}, (err, monthlyReadings) => {
                         if (err) {
                             nextService(err);
@@ -457,9 +457,9 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.eachSeries(meters, function(meter, next){
+            async.each(meters, function(meter, next){
                 const services = meter.services();
-                async.each(services, (service, nextService) => {
+                async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
                     let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
 
