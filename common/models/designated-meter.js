@@ -37,7 +37,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -118,7 +118,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in consumption summary");
+                        console.error(`The request timed out in consumption summary in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -146,7 +146,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.dailyReadings = function dailyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -180,17 +180,16 @@ module.exports = function(Designatedmeter) {
                                 iterable.map(item=> {
                                     summatory += parseFloat(item.value._text);
                                 });
-                                let distribution = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
+                                let commonFormula = ( parseInt(summatory) / (dates.hour * DEFAULT_DAYS * CHARGE_FACTOR) );
                                 let consumption = summatory
-                                let distributionCharge = distribution * Constants.CFE.values.distribution_price;
-                                distribution = distribution.toFixed(2);
+                                let distributionCharge = commonFormula * Constants.CFE.values.distribution_price;
+                                commonFormula = commonFormula.toFixed(2);
                                 distributionCharge = distributionCharge.toFixed(2);
                                 consumption = consumption.toFixed(2);
 
                                 let dailyReadings = {};
                                 dailyReadings.lastUpdated = moment().format();
 
-                                dailyReadings.distribution = distribution;
                                 dailyReadings.chargeDistribution = distributionCharge;
 
                                 dailyReadings.consumption = consumption;
@@ -198,13 +197,18 @@ module.exports = function(Designatedmeter) {
                                 let company_id = meter.company().id;
 
                                 Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 0, {}, (err, res) => {
-                                    let maxDp = 0;
+                                    let maxDpPeak = 0;
+                                    let maxDpMonth = 0;
                                     res.forEach((dpReading) => {
-                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDp) {
-                                            maxDp = parseFloat(dpReading.value);
+                                        if (dpReading.isPeak && parseFloat(dpReading.value) > maxDpPeak) {
+                                            maxDpPeak = parseFloat(dpReading.value);
+                                        }
+                                        if (parseFloat(dpReading.value) > maxDpMonth) {
+                                            maxDpMonth = parseFloat(dpReading.value);
                                         }
                                     });
-                                    dailyReadings.capacity = Math.min(maxDp, parseFloat(distribution));
+                                    dailyReadings.capacity = Math.min(maxDpPeak, parseFloat(commonFormula));
+                                    dailyReadings.distribution = Math.min(maxDpMonth, parseFloat(commonFormula));
 
                                     service.updateAttribute(
                                         "dailyReadings",
@@ -232,7 +236,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in daily readings");
+                        console.error(`The request timed out in daily readings in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -260,7 +264,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
@@ -326,7 +330,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in epimpHistory");
+                        console.error(`The request timed out in epimpHistory in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {
@@ -354,7 +358,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.fpReadings = function fpReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     READINGS.fpReadings(meter, service, meters.length === 1, {}, (err, readings) => {
@@ -409,7 +413,7 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.monthlyReadings = function monthlyReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     READINGS.monthlyReadings(meter, service, meters.length === 1, {}, (err, monthlyReadings) => {
@@ -457,12 +461,16 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.odometerReadings = function odometerReadings(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
-            async.each(meters, function(meter, next){
+            async.eachSeries(meters, function(meter, next){
                 const services = meter.services();
                 async.eachSeries(services, (service, nextService) => {
                     let xhr = new XMLHttpRequest();
-                    let serviceToCall = meter.hostname+ API_PREFIX +"values.xml" + "?var=" +meter.summatory_device+ "." +Constants.Meters.common_names.summatory_dp;
-
+                    let serviceToCall = `${meter.hostname}${API_PREFIX}values.xml`;
+                    service.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += "?var="+ device.name + ".DP";
+                        }
+                    });
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -472,8 +480,15 @@ module.exports = function(Designatedmeter) {
                     xhr.onload = function(){
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            let dp = ( parseFloat(reading.values.variable.value._text) / 1000 );
-                            if(dp){
+                            let iterable = [];
+                            if (!Array.isArray(reading.values.variable)) {
+                                iterable.push(reading.values.variable);
+                            } else {
+                                iterable = reading.values.variable;
+                            }
+                            let dp = iterable.reduce((prev, curr) => prev + parseFloat(curr.value._text), 0);
+                            dp = parseFloat(dp / 1000);
+                            if(dp) {
                                 dp = dp.toFixed(2);
                                 
                                 let company_id = meter.company().id;
@@ -502,7 +517,7 @@ module.exports = function(Designatedmeter) {
                         else nextService();
                     };
                     xhr.onabort = function () {
-                        console.error("The request timed out in odometerReadings");
+                        console.error(`The request timed out in odometerReadings in company ${meter.company().company_name}`);
                     };
                     xhr.send();
                 }, function(errService) {

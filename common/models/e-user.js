@@ -40,4 +40,24 @@ module.exports = function(Euser) {
         });
         next();
     });
+
+    Euser.resetPassword = function resetPassword(userId, cb) {
+        Euser.findById(userId, (err, user) => {
+            if (err) return cb(err);
+            if (!user) return cb({ status: 400, message: 'No user found' });
+            user.updateAttribute('password','Password123', (err, user) => {
+                if (err) return cb(err);
+                cb(null, 'OK');
+            });
+        });
+    }
+
+    Euser.remoteMethod(
+        'resetPassword', {
+            accepts: [
+                { arg: 'userId', type: 'string' }
+            ],
+            returns: { arg: 'result', type: 'string' }
+        }
+    );
 };

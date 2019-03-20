@@ -176,7 +176,7 @@ module.exports = function(Company) {
                         lastname: data.manager.lastname,
                         phone: data.company.phone,
                         email: data.manager.email,
-                        password: 'Energybook',
+                        password: 'Password123',
                         created_at: new Date(),
                         updated_at: new Date()
                     }, function(err, user){
@@ -189,7 +189,7 @@ module.exports = function(Company) {
                             lastname: data.user.lastname,
                             phone: data.company.phone,
                             email: data.user.email,
-                            password: 'Energybook',
+                            password: 'Password123',
                             created_at: new Date(),
                             updated_at: new Date()
                         }, function(err, user){

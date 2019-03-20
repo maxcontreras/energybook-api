@@ -271,6 +271,7 @@ module.exports = function(Meter) {
 
                                     for (const key in netCode) {
                                         netCode[key].date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
+                                        if (key === 'Ssist') netCode[key].value = netCode[key].value / 1000;
                                         netCode[key].value = netCode[key].value.toFixed(2);
                                         values[key].push(netCode[key]);
                                     }
