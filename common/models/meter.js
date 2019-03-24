@@ -508,7 +508,7 @@ module.exports = function(Meter) {
                                 } else {
                                     iterable = reading.recordGroup.record;
                                 }
-                                iterable.map(item => {
+                                values = iterable.map(item => {
                                     epimp = {};
                                     const day = item.dateTime._text.slice(0,2);
                                     const month = item.dateTime._text.slice(2,4);
@@ -529,7 +529,7 @@ module.exports = function(Meter) {
                                     }, 0);
                                     epimp.value = (epimp.value < 0)? 0:epimp.value.toFixed(2);
                                     epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
-                                    values.push(epimp);
+                                    return epimp;
                                 });
                             }
                             cb(null, values);
