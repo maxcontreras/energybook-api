@@ -317,15 +317,9 @@ module.exports = function(Meter) {
         else {
             DesignatedMeter.findOne({
                 include: [
-                    {
-                        relation: 'company'
-                    },
-                    {
-                        relation: 'meter'
-                    },
-                    {
-                        relation: 'services'
-                    }
+                    { relation: 'company' },
+                    { relation: 'meter' },
+                    { relation: 'services' }
                 ],
                 where: {
                     and: [
@@ -335,96 +329,78 @@ module.exports = function(Meter) {
                 },
             }, function(err, meter){
                 if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
-                if(meter){
-                    let xhr = new XMLHttpRequest();
-
-                    let values = [];
-                    const dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
-                    
-                    if (variable === 'DP') {
-                        dates.period = 900;
-                    } else {
-                        dates.period = interval;
-                    }
-
-                    let serviceToCall = `${meter.hostname}${API_PREFIX}records.xml?begin=${dates.begin}?end=${dates.end}`;
-                    if (service !== '') {
-                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
-                        selectedService.devices.forEach((device, index) => {
-                            if (index !== 0) {
-                                serviceToCall += `?var=${device.name}.${variable}`;
-                            }
-                        });
-                    } else {
-                        serviceToCall += `?var=${device}.${variable}`;
-                    }
-                    serviceToCall += `?period=${dates.period}`;
-                    xhr.open('GET', serviceToCall);
-                    setTimeout(() => {
-                        if (xhr.readyState < 3) {
-                            xhr.abort();
-                        }
-                    }, 8000);
-                    xhr.onload = function() {
-                        if (xhr.readyState === 4 && xhr.status === 200) {
-                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-
-                            if(reading.recordGroup && reading.recordGroup.record){
-                                let iterable = [];
-                                if (!Array.isArray(reading.recordGroup.record)) {
-                                    iterable.push(reading.recordGroup.record)
-                                } else {
-                                    iterable = reading.recordGroup.record;
-                                }
-                                values = iterable.map(item => {
-                                    const stdReading = {};
-                                    let tmp_values = [];
-                                    if (!Array.isArray(item.field)) {
-                                        tmp_values.push(item.field);
-                                    } else {
-                                        tmp_values = item.field;
-                                    }
-                                    stdReading.value = tmp_values.reduce((accumulator, currentValue) => {
-                                        return accumulator + parseFloat(currentValue.value._text);
-                                    }, 0);
-
-                                    const day = item.dateTime._text.slice(0,2);
-                                    const month = item.dateTime._text.slice(2,4);
-                                    const year = item.dateTime._text.slice(4,8);
-                                    const hour = item.dateTime._text.slice(8,10);
-                                    const minute = item.dateTime._text.slice(10,12);
-                                    const second = item.dateTime._text.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-
-                                    const rate_type = EDS.getCFERateType(tmp_date);
-
-                                    if (variable === 'DP') {
-                                        stdReading.value /= 1000;
-                                        stdReading.isPeak = rate_type === 'peak';
-                                    }
-
-                                    stdReading.value = stdReading.value.toFixed(2);
-                                    stdReading.value = (stdReading.value < 0) ? 0 : parseFloat(stdReading.value);
-
-                                    let utc_date = moment(tmp_date).tz(timezone);
-                                    stdReading.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
-                                    return stdReading;
-                                });
-                            }
-                            cb(null, values);
-                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                            cb({status: 400, message:"Error trying to read meter"}, null);
-                        }
-                    };
-                    xhr.onerror = function() {
-                        console.log("Something went wrong on standardReadings");
-                        cb({status: 504, message:"Meter not reachable"}, null);
-                    };
-                    xhr.onabort = function () {
-                        console.log("standardReadings request timed out");
-                    };
-                    xhr.send();
+                
+                let values = [];
+                const dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                
+                if (variable === 'DP') {
+                    dates.period = 900;
+                } else {
+                    dates.period = interval;
                 }
+
+                let serviceToCall = `${meter.hostname}${API_PREFIX}records.xml?begin=${dates.begin}?end=${dates.end}`;
+                if (service !== '') {
+                    const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                    selectedService.devices.forEach((device, index) => {
+                        if (index !== 0) {
+                            serviceToCall += `?var=${device.name}.${variable}`;
+                        }
+                    });
+                } else {
+                    serviceToCall += `?var=${device}.${variable}`;
+                }
+                serviceToCall += `?period=${dates.period}`;
+
+                EDS.performMeterRequest(serviceToCall, 8000)
+                    .then(reading => {
+                        if(reading.recordGroup && reading.recordGroup.record) {
+                            let iterable = [];
+                            if (!Array.isArray(reading.recordGroup.record)) {
+                                iterable.push(reading.recordGroup.record)
+                            } else {
+                                iterable = reading.recordGroup.record;
+                            }
+                            values = iterable.map(item => {
+                                const stdReading = {};
+                                let tmp_values = [];
+                                if (!Array.isArray(item.field)) {
+                                    tmp_values.push(item.field);
+                                } else {
+                                    tmp_values = item.field;
+                                }
+                                stdReading.value = tmp_values.reduce((accumulator, currentValue) => {
+                                    return accumulator + parseFloat(currentValue.value._text);
+                                }, 0);
+
+                                const day = item.dateTime._text.slice(0,2);
+                                const month = item.dateTime._text.slice(2,4);
+                                const year = item.dateTime._text.slice(4,8);
+                                const hour = item.dateTime._text.slice(8,10);
+                                const minute = item.dateTime._text.slice(10,12);
+                                const second = item.dateTime._text.slice(12,14);
+                                const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                const rate_type = EDS.getCFERateType(tmp_date);
+
+                                if (variable === 'DP') {
+                                    stdReading.value /= 1000;
+                                    stdReading.isPeak = rate_type === 'peak';
+                                }
+
+                                stdReading.value = stdReading.value.toFixed(2);
+                                stdReading.value = (stdReading.value < 0) ? 0 : parseFloat(stdReading.value);
+
+                                let utc_date = moment(tmp_date).tz(timezone);
+                                stdReading.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
+                                return stdReading;
+                            });
+                        }
+                        cb(null, values);
+                    })
+                    .catch(error => {
+                        cb(error);
+                    });
             });
         }
     }
