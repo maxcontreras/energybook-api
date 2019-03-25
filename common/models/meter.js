@@ -310,7 +310,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.getDpReadingsByFilter = function getDpReadingsByFilter(id, device, service, filter, custom_dates, cb) {
+    Meter.standardReadings = function standardReadings(id, device, service, variable, filter, interval, custom_dates, cb) {
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
         if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
@@ -338,32 +338,27 @@ module.exports = function(Meter) {
                 if(meter){
                     let xhr = new XMLHttpRequest();
 
-                    // Dp values
                     let values = [];
-
-                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                    const dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
                     
-                    // Check period of the graph
-                    if (filter === Constants.Meters.filters.today || 
-                        filter === Constants.Meters.filters.yesterday ||
-                        filter === Constants.Meters.filters.week ||
-                        filter === Constants.Meters.filters.month) {
-                        // Change period of readings to every 15 minutes = 900 seconds
+                    if (variable === 'DP') {
                         dates.period = 900;
+                    } else {
+                        dates.period = interval;
                     }
 
-                    let serviceToCall = meter.hostname+ API_PREFIX +"records.xml" + "?begin=" +dates.begin+ "?end="+dates.end;
+                    let serviceToCall = `${meter.hostname}${API_PREFIX}records.xml?begin=${dates.begin}?end=${dates.end}`;
                     if (service !== '') {
                         const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
                         selectedService.devices.forEach((device, index) => {
                             if (index !== 0) {
-                                serviceToCall += "?var="+ device.name + ".DP";
+                                serviceToCall += `?var=${device.name}.${variable}`;
                             }
                         });
                     } else {
-                        serviceToCall += "?var=" +device+ ".DP";
+                        serviceToCall += `?var=${device}.${variable}`;
                     }
-                    serviceToCall += "?period=" +dates.period;
+                    serviceToCall += `?period=${dates.period}`;
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -373,7 +368,7 @@ module.exports = function(Meter) {
                     xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            let dp = {};
+
                             if(reading.recordGroup && reading.recordGroup.record){
                                 let iterable = [];
                                 if (!Array.isArray(reading.recordGroup.record)) {
@@ -382,19 +377,17 @@ module.exports = function(Meter) {
                                     iterable = reading.recordGroup.record;
                                 }
                                 values = iterable.map(item => {
-                                    dp = {};
+                                    const stdReading = {};
                                     let tmp_values = [];
                                     if (!Array.isArray(item.field)) {
                                         tmp_values.push(item.field);
                                     } else {
                                         tmp_values = item.field;
                                     }
-                                    dp.value = tmp_values.reduce((accumulator, currentValue) => {
+                                    stdReading.value = tmp_values.reduce((accumulator, currentValue) => {
                                         return accumulator + parseFloat(currentValue.value._text);
                                     }, 0);
-                                    dp.value /= 1000;
-                                    dp.value = dp.value.toFixed(2);
-                                    dp.value = (dp.value < 0)? 0:dp.value;
+
                                     const day = item.dateTime._text.slice(0,2);
                                     const month = item.dateTime._text.slice(2,4);
                                     const year = item.dateTime._text.slice(4,8);
@@ -405,11 +398,17 @@ module.exports = function(Meter) {
 
                                     const rate_type = EDS.getCFERateType(tmp_date);
 
-                                    dp.isPeak = rate_type === 'peak';
+                                    if (variable === 'DP') {
+                                        stdReading.value /= 1000;
+                                        stdReading.isPeak = rate_type === 'peak';
+                                    }
+
+                                    stdReading.value = stdReading.value.toFixed(2);
+                                    stdReading.value = (stdReading.value < 0) ? 0 : parseFloat(stdReading.value);
 
                                     let utc_date = moment(tmp_date).tz(timezone);
-                                    dp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
-                                    return dp;
+                                    stdReading.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
+                                    return stdReading;
                                 });
                             }
                             cb(null, values);
@@ -418,11 +417,11 @@ module.exports = function(Meter) {
                         }
                     };
                     xhr.onerror = function() {
-                        console.log("Something went wrong on dpReadings");
+                        console.log("Something went wrong on standardReadings");
                         cb({status: 504, message:"Meter not reachable"}, null);
                     };
                     xhr.onabort = function () {
-                        console.log("dpReadings request timed out");
+                        console.log("standardReadings request timed out");
                     };
                     xhr.send();
                 }
@@ -431,131 +430,12 @@ module.exports = function(Meter) {
     }
 
     Meter.remoteMethod(
-        'getDpReadingsByFilter', {
+        'standardReadings', {
             accepts: [
                 { arg: 'id', type: 'string' },
                 { arg: 'device', type: 'string'},
                 { arg: 'service', type: 'string'},
-                { arg: 'filter', type: 'number' },
-                { arg: 'custom_dates', type: 'object' }
-            ],
-            returns: { arg: 'values', type: 'array', root: true }
-        }
-    );
-
-    Meter.getEpimpReadingsByFilter = function getEpimpReadingsByFilter(id, device, service, filter, interval, custom_dates, cb){
-        var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
-
-        if(!id) cb({status: 400, message: 'Error al consultar información de medidor'}, null);
-        else {
-            DesignatedMeter.findOne({
-                include: [
-                    {
-                        relation: 'company'
-                    },
-                    {
-                        relation: 'meter'
-                    },
-                    {
-                        relation: 'services'
-                    }
-                ],
-                where: {
-                    and: [
-                        { meter_id: id },
-                        { active: 1 }
-                    ]
-                },
-            }, function(err, meter){
-                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
-                if(meter){
-                    let xhr = new XMLHttpRequest();
-
-                    // Epimp values
-                    let values = [];
-                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
-
-                    if (interval !== -1) {
-                        dates.period = interval;
-                    }
-
-                    let serviceToCall = meter.hostname+API_PREFIX+"records.xml"+"?begin="+dates.begin+"?end="+dates.end;
-                    if (service !== '') {
-                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
-                        selectedService.devices.forEach((device, index) => {
-                            if (index !== 0) {
-                                serviceToCall += "?var="+ device.name + ".EPimp";
-                            }
-                        });
-                    } else {
-                        serviceToCall += "?var=" +device+ ".EPimp";
-                    }
-                    serviceToCall += "?period=" +dates.period;
-                    xhr.open('GET', serviceToCall);
-                    setTimeout(() => {
-                        if (xhr.readyState < 3) {
-                            xhr.abort();
-                        }
-                    }, 4000);
-                    xhr.onload = function(){
-                        if (xhr.readyState === 4 && xhr.status === 200) {
-                            var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-                            let epimp = {};
-                            if(reading.recordGroup && reading.recordGroup.record){
-                                let iterable = [];
-                                if (!Array.isArray(reading.recordGroup.record)) {
-                                    iterable.push(reading.recordGroup.record)
-                                } else {
-                                    iterable = reading.recordGroup.record;
-                                }
-                                values = iterable.map(item => {
-                                    epimp = {};
-                                    const day = item.dateTime._text.slice(0,2);
-                                    const month = item.dateTime._text.slice(2,4);
-                                    const year = item.dateTime._text.slice(4,8);
-                                    const hour = item.dateTime._text.slice(8,10);
-                                    const minute = item.dateTime._text.slice(10,12);
-                                    const second = item.dateTime._text.slice(12,14);
-                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    let utc_date = moment(tmp_date).tz(timezone);
-                                    let tmp_values = [];
-                                    if (!Array.isArray(item.field)) {
-                                        tmp_values.push(item.field);
-                                    } else {
-                                        tmp_values = item.field;
-                                    }
-                                    epimp.value = tmp_values.reduce((accumulator, currentValue) => {
-                                        return accumulator + parseFloat(currentValue.value._text);
-                                    }, 0);
-                                    epimp.value = (epimp.value < 0)? 0:epimp.value.toFixed(2);
-                                    epimp.date = EDS.parseDate(utc_date.format('YYYY-MM-DD HH:mm:ss'));
-                                    return epimp;
-                                });
-                            }
-                            cb(null, values);
-                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                            cb({status: 400, message:"Error trying to read meter"}, null);
-                        }
-                    };
-                    xhr.onerror = function() {
-                        console.log("Something went wrong on epimpReadings");
-                        cb({status: 504, message:"Meter not reachable"}, null);
-                    };
-                    xhr.onabort = function () {
-                        console.log("epimpReadings request timed out");
-                    };
-                    xhr.send();
-                }
-            });
-        }
-    };
-
-    Meter.remoteMethod(
-        'getEpimpReadingsByFilter', {
-            accepts: [
-                { arg: 'id', type: 'string' },
-                { arg: 'device', type: 'string' },
-                { arg: 'service', type: 'string'},
+                { arg: 'variable', type: 'string'},
                 { arg: 'filter', type: 'number' },
                 { arg: 'interval', type: 'number' },
                 { arg: 'custom_dates', type: 'object' }
