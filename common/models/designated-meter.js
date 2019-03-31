@@ -650,7 +650,6 @@ module.exports = function(Designatedmeter) {
                     function deleteMeter(next) {
                         Meters.destroyById(meter.id, err => {
                             if (err) console.log('Error while deleting meter');
-                            else console.log('Meter deleted');
                             next();
                         });
                     },
@@ -660,10 +659,7 @@ module.exports = function(Designatedmeter) {
                                 if (err) console.log('Error while deleting service');
                                 nextService();
                             })
-                        }, function() {
-                            console.log('Services deleted succesfully');
-                            next();
-                        });
+                        }, next);
                     },
                     function deleteDesignatedMeter(next) {
                         Designatedmeter.destroyById(meterId, err => {
@@ -672,13 +668,8 @@ module.exports = function(Designatedmeter) {
                         })
                     }
                 ], function (err) {
-                    if (err) {
-                        console.log('Error while deleting DesignatedMeterId');
-                        cb(err);
-                    } else {
-                        console.log('Meter deleted succesfully');
-                        cb(null, 'Designated Meter deleted succesfully');
-                    }
+                    if (err) cb(err);
+                    else cb(null, 'Designated Meter deleted succesfully');
                 });
             } else {
                 cb({ status: 404, message: 'DesignatedMeter not found' });
