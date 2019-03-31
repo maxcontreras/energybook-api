@@ -636,4 +636,62 @@ module.exports = function(Designatedmeter) {
             returns: {arg: 'result', type: 'string'}
         }
     );
+
+    Designatedmeter.deleteMeterWithServices = function deleteMeterWithServices(meterId, cb) {
+        const Services = app.loopback.getModel('Service');
+
+        Designatedmeter.findById(meterId, { include: ['meter', 'services'] }, (err, dsgMeter) => {
+            if (err) return cb(err);
+            if (dsgMeter) {
+                const services = dsgMeter.services();
+                const meter = dsgMeter.meter();
+
+                async.waterfall([
+                    function deleteMeter(next) {
+                        Meters.destroyById(meter.id, err => {
+                            if (err) console.log('Error while deleting meter');
+                            else console.log('Meter deleted');
+                            next();
+                        });
+                    },
+                    function deleteServices(next) {
+                        async.each(services, (service, nextService) => {
+                            Services.destroyById(service.id, err => {
+                                if (err) console.log('Error while deleting service');
+                                nextService();
+                            })
+                        }, function() {
+                            console.log('Services deleted succesfully');
+                            next();
+                        });
+                    },
+                    function deleteDesignatedMeter(next) {
+                        Designatedmeter.destroyById(meterId, err => {
+                            if (err) next(err);
+                            else next();
+                        })
+                    }
+                ], function (err) {
+                    if (err) {
+                        console.log('Error while deleting DesignatedMeterId');
+                        cb(err);
+                    } else {
+                        console.log('Meter deleted succesfully');
+                        cb(null, 'Designated Meter deleted succesfully');
+                    }
+                });
+            } else {
+                cb({ status: 404, message: 'DesignatedMeter not found' });
+            }
+        });
+    }
+
+    Designatedmeter.remoteMethod(
+        'deleteMeterWithServices', {
+            accepts: [
+                { arg: 'meterId', type: 'string' }
+            ],
+            returns: { arg: 'result', type: 'string' }
+        }
+    );
 };
