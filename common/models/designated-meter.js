@@ -287,7 +287,13 @@ module.exports = function(Designatedmeter) {
                             let reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             if (reading.recordGroup && reading.recordGroup.record) {
                                 let epimp = {};
-                                reading.recordGroup.record.map( (item, key) => {
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    iterable.push(reading.recordGroup.record);
+                                } else {
+                                    iterable = reading.recordGroup.record;
+                                }
+                                iterable.map( (item, key) => {
                                     let read = {};
                                     if(item.field){
                                         let iterable = [];
