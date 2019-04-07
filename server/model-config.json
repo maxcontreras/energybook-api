@@ -71,5 +71,9 @@
   "Service": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "InformationFile": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }
