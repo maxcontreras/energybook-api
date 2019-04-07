@@ -1,7 +1,7 @@
 {
     "name": "InformationFile",
     "plural": "InformationFiles",
-    "base": "persistedModel",
+    "base": "PersistedModel",
     "idInjection": true,
     "options": {
       "validateUpsert": true
