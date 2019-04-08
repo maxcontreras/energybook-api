@@ -196,7 +196,7 @@ module.exports = function(Designatedmeter) {
 
                                 let company_id = meter.company().id;
 
-                                Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 0, {}, (err, res) => {
+                                Meters.standardReadings(meter.meter_id, '', service.serviceName, Constants.Readings.variables.Demanda, 0, 900, {}, (err, res) => {
                                     let maxDpPeak = 0;
                                     let maxDpMonth = 0;
                                     res.forEach((dpReading) => {

@@ -142,7 +142,7 @@ const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, 
 
                 monthlyReadings.consumption = consumption;
 
-                Meters.getDpReadingsByFilter(meter.meter_id, '', service.serviceName, 3, {}, (err, res) => {
+                Meters.standardReadings(meter.meter_id, '', service.serviceName, Constants.Readings.variables.Demanda, 3, 900, {}, (err, res) => {
                     let maxDpPeak = 0;
                     let maxDpMonth = 0;
                     res.forEach((dpReading) => {

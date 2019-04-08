@@ -44,6 +44,34 @@ var performEDSrequest = function performEDSrequest(service, next){
     };
 };
 
+const performMeterRequest = function performMeterRequest (url, timeout = 4000) {
+    return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+
+        xhr.open('GET', url);
+        setTimeout(() => {
+            if (xhr.readyState < 3) {
+                xhr.abort();
+            }
+        }, timeout);
+        xhr.onload = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                resolve(reading);
+            } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                reject({ status: 400, message:"Error trying to read meter" });
+            }
+        }
+        xhr.onerror = function() {
+            reject({ status: 504, message:"Meter not reachable" });
+        };
+        xhr.onabort = function () {
+            console.log("Request timed out");
+        };
+        xhr.send();
+    });
+}
+
 var getDeviceInfo = function getDeviceInfo(device, next){
     let serviceToCall = "deviceInfo.xml" + "?id=" + device.device_name;
     performEDSrequest(serviceToCall, function(err, response){
@@ -277,6 +305,7 @@ const getCFERate = function(ISOdate, city) {
 }
 
 
+module.exports.performMeterRequest = performMeterRequest;
 module.exports.parseDate = parseDate;
 module.exports.performEDSrequest = performEDSrequest;
 module.exports.getDeviceInfo = getDeviceInfo;

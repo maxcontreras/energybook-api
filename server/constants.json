@@ -25,6 +25,12 @@
             "3": "Bloqueado"
         }
     },
+    "Readings": {
+        "variables": {
+            "Demanda": "DP",
+            "Consumo": "EPimp"
+        }
+    },
     "Meters": {
         "active": {
             "Activo": 1,
