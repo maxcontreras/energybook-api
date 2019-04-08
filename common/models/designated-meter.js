@@ -287,7 +287,13 @@ module.exports = function(Designatedmeter) {
                             let reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
                             if (reading.recordGroup && reading.recordGroup.record) {
                                 let epimp = {};
-                                reading.recordGroup.record.map( (item, key) => {
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    iterable.push(reading.recordGroup.record);
+                                } else {
+                                    iterable = reading.recordGroup.record;
+                                }
+                                iterable.map( (item, key) => {
                                     let read = {};
                                     if(item.field){
                                         let iterable = [];
@@ -634,6 +640,55 @@ module.exports = function(Designatedmeter) {
                 {arg: 'meterId', type: 'string', required: false}
             ],
             returns: {arg: 'result', type: 'string'}
+        }
+    );
+
+    Designatedmeter.deleteMeterWithServices = function deleteMeterWithServices(meterId, cb) {
+        const Services = app.loopback.getModel('Service');
+
+        Designatedmeter.findById(meterId, { include: ['meter', 'services'] }, (err, dsgMeter) => {
+            if (err) return cb(err);
+            if (dsgMeter) {
+                const services = dsgMeter.services();
+                const meter = dsgMeter.meter();
+
+                async.waterfall([
+                    function deleteMeter(next) {
+                        Meters.destroyById(meter.id, err => {
+                            if (err) console.log('Error while deleting meter');
+                            next();
+                        });
+                    },
+                    function deleteServices(next) {
+                        async.each(services, (service, nextService) => {
+                            Services.destroyById(service.id, err => {
+                                if (err) console.log('Error while deleting service');
+                                nextService();
+                            })
+                        }, next);
+                    },
+                    function deleteDesignatedMeter(next) {
+                        Designatedmeter.destroyById(meterId, err => {
+                            if (err) next(err);
+                            else next();
+                        })
+                    }
+                ], function (err) {
+                    if (err) cb(err);
+                    else cb(null, 'Designated Meter deleted succesfully');
+                });
+            } else {
+                cb({ status: 404, message: 'DesignatedMeter not found' });
+            }
+        });
+    }
+
+    Designatedmeter.remoteMethod(
+        'deleteMeterWithServices', {
+            accepts: [
+                { arg: 'meterId', type: 'string' }
+            ],
+            returns: { arg: 'result', type: 'string' }
         }
     );
 };

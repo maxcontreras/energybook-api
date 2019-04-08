@@ -83,7 +83,7 @@ const fpReadings = function(meter, service, isSingleCompany, custom_dates, cb) {
         else cb(null, null);
     };
     xhr.onabort = function () {
-        console.error(`The request timed out in fpReadings in company ${meter.company().company_name}`);
+        console.log(`The request timed out in fpReadings in company ${meter.company().company_name}`);
     };
     xhr.send();
 }
@@ -171,7 +171,7 @@ const monthlyReadings = function(meter, service, isSingleCompany, custom_dates, 
         else cb(null, null);
     };
     xhr.onabort = function () {
-        console.error(`The request timed out in monthly readings in company ${meter.company().company_name}`);
+        console.log(`The request timed out in monthly readings in company ${meter.company().company_name}`);
     };
     xhr.send();
 }
