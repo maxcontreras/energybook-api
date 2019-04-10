@@ -41,6 +41,10 @@
       "type": "date",
       "required": true
     },
+    "for_free_trial": {
+      "type": "boolean",
+      "default": false
+    },
     "updated_at": {
       "type": "date"
     },
