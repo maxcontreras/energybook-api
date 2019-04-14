@@ -28,10 +28,10 @@
       "required": true,
       "default": 1
     },
-    "contactData": {
+    "contact_data": {
       "type": "object"
     },
-    "freeTrial": {
+    "free_trial": {
       "type": "boolean"
     },
     "position": {

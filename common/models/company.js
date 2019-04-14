@@ -5,45 +5,33 @@ const async = require('async');
 const Constants = require('./../../server/constants.json');
 
 module.exports = function(Company) {
-    Company.register = function register(data, cb){
-        let new_company = data.data;
-
-        Company.create({
-            company_name: new_company.company_name,
-            phone: new_company.phone,
-            company_type: new_company.type_id,
-            size: new_company.size,
-            status: Constants.Companies.status.Nuevo,
-            created_at: new Date(),
-            updated_at: new Date()
-        }, function(err, company){
-            if(err) cb(err, null)
-            if(company){
+    Company.register = function register(contactData, user, cb){
+        Company.findOne({ where: { for_free_trial: true }})
+            .then(company => {
+                if (!company) return cb({ status: 404, message: 'No default company set for free trial' });
                 company.users.create({
-                    name: new_company.name,
-                    lastname: new_company.lastname,
-                    phone: new_company.phone,
-                    email: new_company.email,
-                    password: new_company.password,
-                    role_id: Constants.Eusers.roles.Cliente,
+                    ...user,
                     created_at: new Date(),
-                    updated_at: new Date()
-                }, function(err, user){
-                    if(err) cb(err, null)
-                    if(user){
-                        cb(null, true);
-                    }
+                    updated_at: new Date(),
+                    free_trial: true,
+                    contact_data: contactData
+                }, err => {
+                    if (err) return cb(err);
+                    cb(null, 'OK');
                 });
-            }
-        });
+            })
+            .catch(err => {
+                cb(err);
+            });
     };
 
     Company.remoteMethod(
         'register', {
             accepts: [
-                { arg: 'data', type: 'object' }
+                { arg: 'contactData', type: 'object' },
+                { arg: 'user', type: 'object' }
             ],
-            returns: { arg: 'response', type: 'boolean' }
+            returns: { arg: 'response', type: 'string' }
         }
     );
 
