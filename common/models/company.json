@@ -41,6 +41,10 @@
       "type": "date",
       "required": true
     },
+    "for_free_trial": {
+      "type": "boolean",
+      "default": false
+    },
     "updated_at": {
       "type": "date"
     },
@@ -84,6 +88,13 @@
       "principalType": "ROLE",
       "principalId": "$owner",
       "permission": "ALLOW"
+    },
+    {
+      "accessType": "EXECUTE",
+      "principalType": "ROLE",
+      "principalId": "$everyone",
+      "permission": "ALLOW",
+      "property": "register"
     }
   ],
   "methods": {}

@@ -28,6 +28,12 @@
       "required": true,
       "default": 1
     },
+    "contact_data": {
+      "type": "object"
+    },
+    "free_trial": {
+      "type": "boolean"
+    },
     "position": {
       "type": "string"
     },
