@@ -743,7 +743,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, cb) {
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, generation, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         let modelObject = meter;
         if(!modelObject || !modelObject.meter_id){
@@ -769,6 +769,7 @@ module.exports = function(Meter) {
                     meter.min_value = parseInt(modelObject.min_value);
                     meter.company_id = modelObject.company_id;
                     meter.updated_at = new Date();
+                    meter.generationDevices = generation;
                     meter.save(function(_err, dsgMeter){
                         if(_err) return cb({status: 400, message: "Error al guardar los nuevos datos"});
                         async.mapSeries(meterServices, (serv, next) => {
@@ -791,7 +792,8 @@ module.exports = function(Meter) {
         'updateDesignatedMeter', {
             accepts: [
                 { arg: 'meter', type: 'object' },
-                { arg: 'services', type: 'object' }
+                { arg: 'services', type: 'object' },
+                { arg: 'generation', type: 'array' }
             ],
             returns: { arg: 'response', type: 'object', root: true }
         }
