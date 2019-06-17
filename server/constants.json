@@ -63,6 +63,7 @@
     "CFE": {
         "values": {
             "charge_factor": 0.57,
+            "emission_factor": 0.54,
             "distribution_price": 148.5,
             "capacity_price": 144.71,
             "consumption_price": {
