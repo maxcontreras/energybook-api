@@ -607,6 +607,192 @@ module.exports = function(Meter) {
         }
     );
 
+    Meter.co2e = function co2e(id, device, service, filter, interval, custom_dates, cb) {
+        const emissionFactor = Constants.CFE.values.emission_factor
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    },
+                    {
+                        relation: 'services'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter) {
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if (meter) {
+                    let xhr = new XMLHttpRequest();
+                    
+                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                    // Set period fixed to 1 hour
+                    dates.period = 3600;
+                    let serviceToCall = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
+                    if (service !== '') {
+                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                        selectedService.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                serviceToCall += "?var="+ device.name + ".EPimp";
+                            }
+                        });
+                    } else {
+                        serviceToCall += "?var=" + device + ".EPimp";
+                    }
+                    serviceToCall += "?period=" + dates.period;
+                    //console.log(serviceToCall);
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 120000);
+                    xhr.onload = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let values = [];
+                            if (reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }               
+                                let prevMonth = null;             
+                                // Remembers the previous day
+                                let prevDay = null;
+                                let prevDate = null;
+                                // Keeps track of co2e per day
+                                let dailyCo2e = 0;
+                                let monthlyCo2e = 0;
+                                // Saves values grouped by day interval
+                                let dailyValues = [];
+                                let monthlyValues = [];
+                                async.eachSeries(records, async item => {
+                                    let read = {};
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let date = moment.parseZone(tmp_date).tz(timezone);
+            
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let sum = 0;
+                                    for (let medition of iterable) {
+                                        if (!medition) continue;
+                                        sum += parseFloat(medition.value._text);
+                                    }
+                                    // If interval is per day
+                                    if (interval === 1) {
+                                        if (prevDay !== date.dayOfYear()) {
+                                            if (prevDay != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.co2e = dailyCo2e.toFixed(2);
+                                                dailyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevDay = date.dayOfYear();
+                                            dailyCo2e = 0;
+                                        }
+                                        dailyCo2e += emissionFactor * (sum / 1000);
+                                        Promise.resolve();
+                                    } else if (interval === 2) { //if interval is per month
+                                        if (prevMonth !== date.month()) {
+                                            if (prevMonth != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.co2e = monthlyCo2e.toFixed(2);
+                                                monthlyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevMonth = date.month();
+                                            monthlyCo2e = 0;
+                                        }
+                                        monthlyCo2e += emissionFactor * (sum / 1000);
+                                        Promise.resolve();
+                                    } else {
+                                        // Result object
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.co2e = emissionFactor * (sum / 1000);
+                                        values.push(read);
+                                        Promise.resolve();
+                                    }
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    if (interval === 1) {
+                                        if (prevDay != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.co2e = dailyCo2e.toFixed(2);
+                                            dailyValues.push(read);
+                                        }
+                                        // If interval is daily, replace values with dailyValues
+                                        cb(null, dailyValues);
+                                    } else if (interval == 2) {
+                                        if (prevMonth != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.co2e = monthlyCo2e.toFixed(2);
+                                            monthlyValues.push(read);
+                                        }
+                                        // If interval is daily, replace values with dailyValues
+                                        cb(null, monthlyValues);
+                                    } else {
+                                        cb(null, values);
+                                    }
+                                });
+                            } else {
+                                return cb(null, values)
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    };
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on costs");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("costs request timed out");
+                    };
+                    xhr.send();
+                }
+            });
+        }
+    }
+
+    Meter.remoteMethod(
+        'co2e', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
+                { arg: 'service', type: 'string'},
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
+            ],
+            returns: { arg: 'costs', type: 'array', root: true }
+        }
+    );
+
     Meter.connectedDevices = function connectedDevices(id, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
