@@ -21,7 +21,7 @@ module.exports = function () {
         hostname + api_prefix + "records.xml"
         + "?begin=" + dates.begin + "?end="
         + dates.end;
-      if(Array.isArray(devices)){
+      if(Array.isArray(devices) && devices.length > 1){
         devices.forEach((device, index) => {
           attrs.forEach(attr => {
             if (index !== 0) {
@@ -30,10 +30,12 @@ module.exports = function () {
           });
         });          
       } else {
-        let device = devices;
-        attrs.forEach(attr => {
-          serviceToCall += "?var=" + device.name + "." + attr;
-        });
+        let device = Array.isArray(devices) ? devices[0] : devices;
+        if (device != undefined) {
+          attrs.forEach(attr => {
+            serviceToCall += "?var=" + device.name + "." + attr;
+          });  
+        }
       }
       serviceToCall = serviceToCall + "?period=" + dates.period;
       //console.log('service to call:', serviceToCall);
@@ -49,19 +51,19 @@ module.exports = function () {
       xhr.onload = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
           var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
-          resolve(reading);
+          return resolve(reading);
         } else {
-          reject({ status: 500, message: 'could not retrieve the requested data' });
+          return reject({ status: 500, message: 'could not retrieve the requested data' });
         }
       }
       xhr.onerror = function () {
-        reject({ status: 500, message: 'OnError' });
+        return reject({ status: 500, message: 'An error occurred while requesting data from ' + serviceToCall });
       };
       xhr.onabort = function () {
         console.error('The request timed out in ' + hostname + api_prefix);
-        reject({ status: 500, message: 'OnAbort' })
+        return reject({ status: 500, message: 'OnAbort' })
       };
       xhr.send();
-    });
+    })
   }
 }
