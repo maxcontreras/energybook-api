@@ -17,7 +17,7 @@ const API_PREFIX = "/services/user/";
 const DEFAULT_HOURS = 24;
 const DEFAULT_DAYS = 1;
 const CHARGE_FACTOR = Constants.CFE.values.charge_factor;
-
+const emissionFactor = Constants.CFE.values.emission_factor;
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 const OPTIONS_XML2JS  = {
@@ -263,11 +263,10 @@ module.exports = function(Designatedmeter) {
 
     Designatedmeter.carbonFootprint = function carbonFootprint(company_id, service_name, cb) {
         /** returns a json object that includes the following data
-         *  consumption, generation, total, cO2Emissions, co2Limit
-         *  emissionFactor and co2Emissions
+         *  consumption, generation, total,co2Limit
+         *  emissionFactor and co2e
          *  Receives a company_id and a service name/device name as second parameter
         */
-
         const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         const Services = app.loopback.getModel('Service');
         let dR = new devicesRequests();
@@ -276,7 +275,6 @@ module.exports = function(Designatedmeter) {
         let generation; 
         let total;
         const co2Limit = 25000;
-        const emissionFactor = 0.54;
         let cO2Emissions;
 
         //find the company designatedMeter
@@ -509,6 +507,190 @@ module.exports = function(Designatedmeter) {
         }
     );
 
+    Designatedmeter.generation = function generation(company_id, service_name, device_name, cb) {
+        /** returns a json object that includes the following data
+             *  generation, selfConsumption, networkInjection
+             *  emissionFactor and co2e
+             *  Receives a company_id and a service name/device name as second parameter
+        */
+
+        if(service_name !== undefined && device_name !== undefined) {
+            return cb("Make a request for a service or a device, not both", null);
+        }
+
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        const Services = app.loopback.getModel('Service');
+        let dR = new devicesRequests();
+        
+        //initialization
+        let generation = 0;
+        let selfConsumption = 0;
+        let networkInjection = 0;
+        let co2e = 0;
+
+        //find the company designatedMeter
+        DesignatedMeter.find({
+            where: {
+                'company_id': company_id
+            }    
+        }).then(designatedMeter => {
+            if (designatedMeter === undefined || designatedMeter.length === 0) {
+                return cb("There's no company with " + company_id + " id");
+            }
+            designatedMeter = designatedMeter[0];
+
+            new Promise((resolve, reject) => {
+                if(service_name !== undefined) {
+                    Services.find({
+                        where: {
+                            'designatedMeterId': designatedMeter.id,
+                            'serviceName': service_name
+                        }
+                    }).then(service => {   
+                        if (service === undefined || service.length === 0) {
+                            return reject("There's not a service with " + company_id + " id and " + service_name + " name");
+                        } 
+                        service = service[0];
+                        return resolve(service.devices);
+                    });
+                } else if (device_name !== undefined) {
+                    let device = designatedMeter.devices.find(device => {
+                        return device.name === device_name;
+                    });
+                    if (device === undefined) {
+                        return reject("There's not a device with " + company_id + " id and " + device_name + " name");
+                    }
+                    return resolve([device]);
+                } else {
+                    return reject("There's not a service or device in the request");
+                }    
+            })
+            .then(devices => {
+                let EPgenDevices = [];
+                    
+                if (designatedMeter['generationDevices'] !== undefined || designatedMeter.generationDevices.length !== 0) {
+                    let dMEPgenDevices = new Set(designatedMeter.generationDevices);
+                    let tmpDevices = devices;
+                    devices = [];
+
+                    tmpDevices.forEach((device) => {
+                        if (dMEPgenDevices.has(device.name)) {
+                            EPgenDevices.push(device);
+                        } else {
+                            devices.push(device);
+                        }
+                    });
+                }
+                // console.log("devices:");
+                // console.log(devices);
+                // console.log("EPgenDevices: ");
+                // console.log(EPgenDevices);
+                
+                Promise.all([
+                    //generation
+                    new Promise((resolve, reject) => {
+                        dR.getData(
+                            designatedMeter.hostname,
+                            EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                            API_PREFIX,
+                            EPgenDevices,
+                            [
+                                'EPgen'
+                            ]
+                        )
+                        .then(reading => {
+                            if (reading && reading.recordGroup && reading.recordGroup.record && reading.recordGroup.record.field) {
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record.field)) {
+                                    iterable.push(reading.recordGroup.record.field);
+                                } else {
+                                    iterable = reading.recordGroup.record.field;
+                                }
+                                let summatory = 0;
+                                iterable.map(item => {
+                                    summatory += parseFloat(item.value._text);
+                                });
+                                generation = summatory;
+                            }
+                            resolve(generation); 
+                        })
+                        .catch(err => {
+                            return cb(err, null);
+                        });
+                    }),
+                    //networkInyection
+                    new Promise((resolve, reject) => {
+                        dR.getData(
+                            designatedMeter.hostname,
+                            EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                            API_PREFIX,
+                            devices,
+                            [
+                                'EPexp',
+                                'EPimp'
+                            ]
+                        )
+                        .then((reading) => {
+                            if (reading && reading.recordGroup && reading.recordGroup.record && reading.recordGroup.record.field) {
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record.field)) {
+                                    iterable.push(reading.recordGroup.record.field);
+                                } else {
+                                    iterable = reading.recordGroup.record.field;
+                                }
+                                let summatoryEPimp = 0;
+                                let summatoryEPexp = 0;
+                                let varName;
+                                iterable.map(item => {
+                                    varName = item.id._text.split(".")[1];
+                                    if (varName == "EPimp") {
+                                        summatoryEPimp += parseFloat(item.value._text);
+                                    } else if (varName == "EPexp") {
+                                        summatoryEPexp += parseFloat(item.value._text);
+                                    } 
+                                });
+
+                                networkInjection = summatoryEPexp;
+                                co2e = emissionFactor * (summatoryEPimp / 1000);
+                            }
+                            resolve({
+                                networkInjection,
+                                co2e
+                            });
+                        }).catch(err => {
+                            return cb(err, null);
+                        })
+                    })
+                ])
+                .then((res) => {
+                    selfConsumption = generation - networkInjection;
+                    cb(null, {
+                        generation,
+                        networkInjection,
+                        selfConsumption,
+                        co2e,
+                        emissionFactor
+                    });
+                })
+            })
+            .catch(err => {
+                return cb(err, null);
+            })
+        });
+    }
+
+    Designatedmeter.remoteMethod(
+        'generation', {
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''},
+                { arg: 'service_name', type: 'string',  required: false, default: ''},
+                { arg: 'device_name', type: 'string',  required: false, default: ''}
+            ],
+            returns: { arg: 'response', type: 'object' },
+            http: {path: '/generation', verb: 'get'}
+        }
+    );
+    
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
