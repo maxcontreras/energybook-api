@@ -524,15 +524,23 @@ module.exports = function(Designatedmeter) {
         
         //initialization
         let generation = 0;
+        let generationValue = 0;
         let selfConsumption = 0;
+        let selfConsumptionValue = 0;
         let networkInjection = 0;
+        let networkInjectionValue = 0;
         let co2e = 0;
 
         //find the company designatedMeter
         DesignatedMeter.find({
             where: {
                 'company_id': company_id
-            }    
+            },    
+            include: [
+                {
+                    relation: 'company'
+                }
+            ]
         }).then(designatedMeter => {
             if (designatedMeter === undefined || designatedMeter.length === 0) {
                 return cb("There's no company with " + company_id + " id");
@@ -589,40 +597,72 @@ module.exports = function(Designatedmeter) {
                 Promise.all([
                     //generation
                     new Promise((resolve, reject) => {
+                        let dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
+                        dates.period = 3600;
+
                         dR.getData(
                             designatedMeter.hostname,
-                            EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                            dates,
                             API_PREFIX,
                             EPgenDevices,
                             [
-                                'EPgen'
+                                'EPGen'
                             ]
                         )
                         .then(reading => {
-                            if (reading && reading.recordGroup && reading.recordGroup.record && reading.recordGroup.record.field) {
-                                let iterable = [];
-                                if (!Array.isArray(reading.recordGroup.record.field)) {
-                                    iterable.push(reading.recordGroup.record.field);
+                            if (reading && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
                                 } else {
-                                    iterable = reading.recordGroup.record.field;
+                                    records = reading.recordGroup.record;
                                 }
-                                let summatory = 0;
-                                iterable.map(item => {
-                                    summatory += parseFloat(item.value._text);
+                                async.eachSeries(records, async item => {
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    const rate = CFE_rates.rate;
+
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatory = 0;
+                                    iterable.map(item => {
+                                        summatory += parseFloat(item.value._text);
+                                    });
+                                    generation += summatory;
+                                    generationValue += summatory * rate;
+    
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    resolve({generation, generationValue}); 
                                 });
-                                generation = summatory;
+                            } else {
+                                resolve({generation, generationValue});
                             }
-                            resolve(generation); 
+                            
                         })
                         .catch(err => {
                             return cb(err, null);
                         });
                     }),
-                    //networkInyection
+                    //networkInjection
                     new Promise((resolve, reject) => {
+                        let dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
+                        dates.period = 3600;
+
                         dR.getData(
                             designatedMeter.hostname,
-                            EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                            dates,
                             API_PREFIX,
                             devices,
                             [
@@ -631,45 +671,71 @@ module.exports = function(Designatedmeter) {
                             ]
                         )
                         .then((reading) => {
-                            if (reading && reading.recordGroup && reading.recordGroup.record && reading.recordGroup.record.field) {
-                                let iterable = [];
-                                if (!Array.isArray(reading.recordGroup.record.field)) {
-                                    iterable.push(reading.recordGroup.record.field);
+                            if (reading && reading.recordGroup && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
                                 } else {
-                                    iterable = reading.recordGroup.record.field;
+                                    records = reading.recordGroup.record;
                                 }
-                                let summatoryEPimp = 0;
-                                let summatoryEPexp = 0;
-                                let varName;
-                                iterable.map(item => {
-                                    varName = item.id._text.split(".")[1];
-                                    if (varName == "EPimp") {
-                                        summatoryEPimp += parseFloat(item.value._text);
-                                    } else if (varName == "EPexp") {
-                                        summatoryEPexp += parseFloat(item.value._text);
-                                    } 
-                                });
+                                async.eachSeries(records, async item => {
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                networkInjection = summatoryEPexp;
-                                co2e = emissionFactor * (summatoryEPimp / 1000);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    const rate = CFE_rates.rate;
+
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatoryEPimp = 0;
+                                    let summatoryEPexp = 0;
+                                    let varName;
+                                    iterable.map(item => {
+                                        varName = item.id._text.split(".")[1];
+                                        if (varName == "EPimp") {
+                                            summatoryEPimp += parseFloat(item.value._text);
+                                        } else if (varName == "EPexp") {
+                                            summatoryEPexp += parseFloat(item.value._text);
+                                        } 
+                                    });
+                                    networkInjection += summatoryEPexp;
+                                    networkInjectionValue += summatoryEPexp * rate;
+                                    co2e += emissionFactor * (summatoryEPimp / 1000);
+
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    resolve({
+                                        networkInjection,
+                                        co2e
+                                    });    
+                                });
                             }
-                            resolve({
-                                networkInjection,
-                                co2e
-                            });
                         }).catch(err => {
                             return cb(err, null);
                         })
                     })
                 ])
                 .then((res) => {
+                    selfConsumptionValue = generationValue - networkInjectionValue;
                     selfConsumption = generation - networkInjection;
                     cb(null, {
                         generation,
                         networkInjection,
                         selfConsumption,
                         co2e,
-                        emissionFactor
+                        emissionFactor,
+                        generationValue,
+                        networkInjectionValue,
+                        selfConsumptionValue
                     });
                 })
             })
