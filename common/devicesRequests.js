@@ -47,7 +47,7 @@ module.exports = function () {
           console.log(xhr);
           xhr.abort();
         }
-      }, 4000);
+      }, 120000);
       xhr.onload = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
           var reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
