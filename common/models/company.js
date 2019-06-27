@@ -3,6 +3,8 @@
 const app = require('./../../server/server.js');
 const async = require('async');
 const Constants = require('./../../server/constants.json');
+const mail = require('../../server/modules/mail.js');
+const path = require('path');
 
 module.exports = function(Company) {
     Company.register = function register(contactData, user, cb){
@@ -23,6 +25,10 @@ module.exports = function(Company) {
             .catch(err => {
                 cb(err);
             });
+        const templateVars = user;
+        const templatePath = path.join(__dirname, '/../../server/templates/welcome.mustache');
+    
+        mail.sendMail(templatePath, templateVars, {to: user.email, subject:"El equipo de Energybook te da la bienvenida"});
     };
 
     Company.remoteMethod(

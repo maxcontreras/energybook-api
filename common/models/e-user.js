@@ -10,6 +10,27 @@ var moment = require('moment-timezone');
 
 module.exports = function(Euser) {
 
+    Euser.trialDaysLeft = function trialDaysLeft(id, cb) {
+        Euser.findById(id, (err, user) => {
+            if (err) return cb(err, null);
+            if (!user) return cb({ status: 400, message: 'No user found' }, null);
+            if (!("free_trial" in user)) return cb({status: 403, message: 'The user is not on free_trial period'}, null);
+            if (user.free_trial !== true) return cb({status: 403, message: 'The user is not on free_trial period'}, null);
+            let lastTrialDay = moment(user.created_at).add(Constants.Trial.days, 'days');
+            let daysLeft = moment(lastTrialDay).diff(moment(), 'days');
+            return cb(null, daysLeft);
+        })
+    }
+
+    Euser.remoteMethod(
+        'trialDaysLeft', {
+        accepts: [
+            { arg: 'id', type: 'string' },
+        ],
+        returns: { arg: 'days', type: 'number' },
+        http: {path: '/trialDaysLeft', verb: 'get'}
+    })
+
     Euser.beforeRemote('login', function(ctx, modelInstance, next) {
         if (!ctx.req.body.email || !ctx.req.body.password)
             return next({statusCode: 404, message: 'Datos insuficientes para iniciar sesión.'});
@@ -22,9 +43,28 @@ module.exports = function(Euser) {
             if (err) return next(err);
             if (!user) return next({statusCode: 404, message: 'Usuario inexistente.'});
             if (user.role_id === Constants.Eusers.roles.Admin) return next();
-            // TODO: bloq user if registration free time is done
             if(user.company().status === Constants.Companies.status.Bloqueada) return next({statusCode: 403, message: 'Lo sentimos tu empresa está bloqueada, por favor contacta a soporte'});
-            return next();
+            // TODO: bloq user if registration free time is done
+            new Promise((resolve, reject) => {
+                if (!("free_trial" in user))
+                    return resolve();
+                if (user.free_trial !== true) {
+                    return resolve();
+                }
+                Euser.trialDaysLeft(String(user.id), (err, daysLeft) => {
+                    if(err) return reject(err);
+                    if(daysLeft < 0) {
+                        return reject({statusCode: 403, message: 'Tu periodo de prueba se ha agotado'});
+                    }
+                    return resolve();
+                })
+            })
+            .then(() => {
+                return next();    
+            })
+            .catch(err => {
+                return next(err);
+            })
         });
     });
 

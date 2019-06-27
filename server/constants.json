@@ -60,6 +60,9 @@
             "summatory_pf": "FPT"
         }
     },
+    "Trial": {
+        "days": 30
+    },
     "CFE": {
         "values": {
             "charge_factor": 0.57,
