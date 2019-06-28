@@ -8,6 +8,7 @@ const Converter = require('xml-js');
 const moment = require('moment-timezone');
 const Constants = require('./../../server/constants.json');
 const _l = require('lodash');
+const devicesRequests = require('../devicesRequests.js');
 
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const xhr = new XMLHttpRequest();
@@ -607,6 +608,503 @@ module.exports = function(Meter) {
         }
     );
 
+    Meter.generationReadings = function generationReadings(id, device, service, filter, interval, variable, custom_dates, cb) {
+        const Services = app.loopback.getModel('Service');
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        let dR = new devicesRequests();
+
+        DesignatedMeter.findOne({
+            include: [
+                {
+                    relation: 'company'
+                },
+                {
+                    relation: 'meter'
+                },
+                {
+                    relation: 'services'
+                }
+            ],
+            where: {
+                and: [
+                    { meter_id: id },
+                    { active: 1 }
+                ]
+            }
+        })
+        .then((meter) => {
+            if (!meter) return cb({status: 400, message: "Error while consulting meter variables"}, null);
+            
+            new Promise((resolve, reject) => {
+                if(service !== undefined) {
+                    Services.find({
+                        where: {
+                            'designatedMeterId': meter.id,
+                            'serviceName': service
+                        }
+                    }).then(res => {   
+                        if (res === undefined || res.length === 0) {
+                            return reject("There's not a service with " + id + " id and " + res + " name");
+                        } 
+                        service = res[0];
+                        return resolve(service.devices);
+                    });
+                } else if (device !== undefined) {
+                    let foundDevice = meter.devices.find(tmpDevice => {
+                        return tmpDevice.name === device;
+                    });
+                    if (foundDevice === undefined) {
+                        return reject("There's not a device with " + id + " id and " + device + " name");
+                    }
+                    return resolve([foundDevice]);
+                } else {
+                    return reject("There's not a service or device in the request");
+                }    
+            })
+            .then((devices) => {
+                var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                // Set period fixed to 1 hour
+                dates.period = 3600;
+
+                let EPgenDevices = [];   
+                if (meter['generationDevices'] !== undefined || meter.generationDevices.length !== 0) {
+                    let meterEPgenDevices = new Set(meter.generationDevices);
+                    let tmpDevices = devices;
+                    devices = [];
+
+                    tmpDevices.forEach((device) => {
+                        if (meterEPgenDevices.has(device.name)) {
+                            EPgenDevices.push(device);
+                        } else {
+                            devices.push(device);
+                        }
+                    });
+                }
+                //variable
+                // 0 - generation, 1 - selfConsumption, 2 - networkInjection
+                Promise.all([
+                    //generation
+                    new Promise((resolve, reject) => {
+                        if (variable !== 0 && variable !== 1) return resolve();
+                        dR.getData(
+                            meter.hostname,
+                            dates,
+                            API_PREFIX,
+                            EPgenDevices,
+                            [
+                                'EPgen'
+                        ]).then(reading => {
+                            if (reading && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }
+                                let prevPeriod = null;
+                                let prevDate = null;
+                                //stores the values per period
+                                let values = [];
+                                let periodValue = 0;
+                                async.eachSeries(records, async item => {
+                                    let read = {};
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let date = moment.parseZone(tmp_date).tz(timezone);
+                                    
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatory = 0;
+                                    for (let medition of iterable) {
+                                        if (!medition) continue;
+                                        summatory += parseFloat(medition.value._text);
+                                    }
+                                    //per day
+                                    if (interval === 1) {
+                                        if (prevPeriod !== date.dayOfYear()) {
+                                            if (prevPeriod !== null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.value = periodValue.toFixed(2);
+                                                values.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevPeriod = date.dayOfYear();
+                                            periodValue = 0;
+                                        }
+                                        periodValue += summatory;
+                                        Promise.resolve();
+                                    } else if (interval === 2) { //per month
+                                        if (prevPeriod !== date.month()) {
+                                            if (prevPeriod != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.value = periodValue.toFixed(2);
+                                                values.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevPeriod = date.month();
+                                            periodValue = 0;
+                                        }
+                                        periodValue += summatory;
+                                        Promise.resolve();
+                                    } else { //per hour
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.value = summatory;
+                                        values.push(read);
+                                        Promise.resolve();
+                                    }
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    if (interval === 1 || interval === 2) {
+                                        if (prevPeriod != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.value = periodValue.toFixed(2);
+                                            values.push(read);
+                                        }
+                                    }
+                                    resolve(values); 
+                                });
+                            } else {
+                                resolve([]);
+                            }
+                        })                            
+                    }),
+                    //networkInjection
+                    new Promise((resolve, reject) => {
+                        if (variable !== 2 && variable !== 1) return resolve();
+                        dR.getData(
+                            meter.hostname,
+                            dates,
+                            API_PREFIX,
+                            devices,
+                            [
+                                'EPexp'
+                        ]).then(reading => {
+                            if (reading && reading.recordGroup && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }
+                                let prevPeriod = null;
+                                let prevDate = null;
+                                //stores the values per period
+                                let values = [];
+                                let periodValue = 0;
+                                async.eachSeries(records, async item => {
+                                    let read = {};
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let date = moment.parseZone(tmp_date).tz(timezone);
+                                    
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatory = 0;
+                                    for (let medition of iterable) {
+                                        if (!medition) continue;
+                                        summatory += parseFloat(medition.value._text);
+                                    }
+                                    //per day
+                                    if (interval === 1) {
+                                        if (prevPeriod !== date.dayOfYear()) {
+                                            if (prevPeriod !== null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.value = periodValue.toFixed(2);
+                                                values.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevPeriod = date.dayOfYear();
+                                            periodValue = 0;
+                                        }
+                                        periodValue += summatory;
+                                        Promise.resolve();
+                                    } else if (interval === 2) { //per month
+                                        if (prevPeriod !== date.month()) {
+                                            if (prevPeriod != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.value = periodValue.toFixed(2);
+                                                values.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevPeriod = date.month();
+                                            periodValue = 0;
+                                        }
+                                        periodValue += summatory;
+                                        Promise.resolve();
+                                    } else { //per hour
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.value = summatory;
+                                        values.push(read);
+                                        Promise.resolve();
+                                    }
+
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    if (interval === 1 || interval === 2) {
+                                        if (prevPeriod != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.value = periodValue.toFixed(2);
+                                            values.push(read);
+                                        }
+                                    } 
+                                    resolve(values); 
+                                });
+                            } else {
+                                resolve([]);
+                            }
+                        })   
+                    })
+                ])
+                .then(res => {
+                    if (variable === 0) {
+                        return cb(null, res[0]);
+                    } else if (variable === 1) {
+                        let selfConsumptionArr = [];
+                        let auxValue;
+                        res[1].forEach((item, i) => {
+                            if(res[0][i] !== undefined) {
+                                auxValue = (res[0][i].value - item.value);
+                            } else {
+                                auxValue = 0 - item.value;
+                            }
+                            selfConsumptionArr.push({date: item.date, value: auxValue});
+                        });
+                        return cb(null, selfConsumptionArr);
+                    } else if (variable === 2) {
+                        return cb(null, res[1]);
+                    }
+                })
+                .catch(err => {
+                    console.log(err);
+                    return cb(err, null);
+                });
+            });
+        }).catch(err => {
+            cb(err, null);
+        });
+    };
+
+    Meter.remoteMethod(
+        'generationReadings', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
+                { arg: 'service', type: 'string'},
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' },
+                { arg: 'variable', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
+            ],
+            returns: { arg: 'generationReadings', type: 'array', root: true }
+        }
+    );
+
+    Meter.co2e = function co2e(id, device, service, filter, interval, custom_dates, cb) {
+        const emissionFactor = Constants.CFE.values.emission_factor
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+
+        if (!id) cb({ status: 400, message: "Error al obtener la información del medidor" }, null);
+        else {
+            DesignatedMeter.findOne({
+                include: [
+                    {
+                        relation: 'company'
+                    },
+                    {
+                        relation: 'meter'
+                    },
+                    {
+                        relation: 'services'
+                    }
+                ],
+                where: {
+                    and: [
+                        { meter_id: id },
+                        { active: 1 }
+                    ]
+                }
+            }, function(err, meter) {
+                if(err || !meter) cb({status: 400, message: "Error al consultar variables de medidor"}, null);
+                if (meter) {
+                    let xhr = new XMLHttpRequest();
+                    
+                    var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
+                    // Set period fixed to 1 hour
+                    dates.period = 3600;
+                    let serviceToCall = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;
+                    if (service !== '') {
+                        const selectedService = meter.services().filter(serv => serv.serviceName === service)[0];
+                        selectedService.devices.forEach((device, index) => {
+                            if (index !== 0) {
+                                serviceToCall += "?var="+ device.name + ".EPimp";
+                            }
+                        });
+                    } else {
+                        serviceToCall += "?var=" + device + ".EPimp";
+                    }
+                    serviceToCall += "?period=" + dates.period;
+                    //console.log(serviceToCall);
+                    xhr.open('GET', serviceToCall);
+                    setTimeout(() => {
+                        if (xhr.readyState < 3) {
+                            xhr.abort();
+                        }
+                    }, 120000);
+                    xhr.onload = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
+                            let values = [];
+                            if (reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }               
+                                let prevMonth = null;             
+                                // Remembers the previous day
+                                let prevDay = null;
+                                let prevDate = null;
+                                // Keeps track of co2e per day
+                                let dailyCo2e = 0;
+                                let monthlyCo2e = 0;
+                                // Saves values grouped by day interval
+                                let dailyValues = [];
+                                let monthlyValues = [];
+                                async.eachSeries(records, async item => {
+                                    let read = {};
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+                                    let date = moment.parseZone(tmp_date).tz(timezone);
+            
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let sum = 0;
+                                    for (let medition of iterable) {
+                                        if (!medition) continue;
+                                        sum += parseFloat(medition.value._text);
+                                    }
+                                    // If interval is per day
+                                    if (interval === 1) {
+                                        if (prevDay !== date.dayOfYear()) {
+                                            if (prevDay != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.co2e = dailyCo2e.toFixed(2);
+                                                dailyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevDay = date.dayOfYear();
+                                            dailyCo2e = 0;
+                                        }
+                                        dailyCo2e += emissionFactor * (sum / 1000);
+                                        Promise.resolve();
+                                    } else if (interval === 2) { //if interval is per month
+                                        if (prevMonth !== date.month()) {
+                                            if (prevMonth != null) {
+                                                read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                                read.co2e = monthlyCo2e.toFixed(2);
+                                                monthlyValues.push(read);
+                                            }
+                                            prevDate = date;
+                                            prevMonth = date.month();
+                                            monthlyCo2e = 0;
+                                        }
+                                        monthlyCo2e += emissionFactor * (sum / 1000);
+                                        Promise.resolve();
+                                    } else {
+                                        // Result object
+                                        read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
+                                        read.co2e = emissionFactor * (sum / 1000);
+                                        values.push(read);
+                                        Promise.resolve();
+                                    }
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    if (interval === 1) {
+                                        if (prevDay != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.co2e = dailyCo2e.toFixed(2);
+                                            dailyValues.push(read);
+                                        }
+                                        // If interval is daily, replace values with dailyValues
+                                        cb(null, dailyValues);
+                                    } else if (interval == 2) {
+                                        if (prevMonth != null) {
+                                            let read = {};
+                                            read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
+                                            read.co2e = monthlyCo2e.toFixed(2);
+                                            monthlyValues.push(read);
+                                        }
+                                        // If interval is daily, replace values with dailyValues
+                                        cb(null, monthlyValues);
+                                    } else {
+                                        cb(null, values);
+                                    }
+                                });
+                            } else {
+                                return cb(null, values)
+                            }
+                        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                            cb({status: 400, message:"Error trying to read meter"}, null);
+                        }
+                    };
+                    xhr.onerror = function() {
+                        console.log("Something went wrong on costs");
+                        cb({status: 504, message:"Meter not reachable"}, null);
+                    };
+                    xhr.onabort = function () {
+                        console.log("costs request timed out");
+                    };
+                    xhr.send();
+                }
+            });
+        }
+    }
+
+    Meter.remoteMethod(
+        'co2e', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'device', type: 'string' },
+                { arg: 'service', type: 'string'},
+                { arg: 'filter', type: 'number' },
+                { arg: 'interval', type: 'number' },
+                { arg: 'custom_dates', type: 'object' }
+            ],
+            returns: { arg: 'co2e', type: 'array', root: true }
+        }
+    );
+
     Meter.connectedDevices = function connectedDevices(id, cb){
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
@@ -743,7 +1241,7 @@ module.exports = function(Meter) {
         }
     );
 
-    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, cb) {
+    Meter.updateDesignatedMeter = function updateDesignatedMeter(meter, services, generation, cb) {
         var DesignatedMeter = app.loopback.getModel('DesignatedMeter');
         let modelObject = meter;
         if(!modelObject || !modelObject.meter_id){
@@ -769,6 +1267,7 @@ module.exports = function(Meter) {
                     meter.min_value = parseInt(modelObject.min_value);
                     meter.company_id = modelObject.company_id;
                     meter.updated_at = new Date();
+                    meter.generationDevices = generation;
                     meter.save(function(_err, dsgMeter){
                         if(_err) return cb({status: 400, message: "Error al guardar los nuevos datos"});
                         async.mapSeries(meterServices, (serv, next) => {
@@ -791,7 +1290,8 @@ module.exports = function(Meter) {
         'updateDesignatedMeter', {
             accepts: [
                 { arg: 'meter', type: 'object' },
-                { arg: 'services', type: 'object' }
+                { arg: 'services', type: 'object' },
+                { arg: 'generation', type: 'array' }
             ],
             returns: { arg: 'response', type: 'object', root: true }
         }

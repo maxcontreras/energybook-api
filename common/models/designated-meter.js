@@ -1,6 +1,7 @@
 'use strict';
 const https = require('https');
 
+const devicesRequests = require('../devicesRequests.js');
 const moment = require('moment-timezone');
 const async = require('async');
 const app = require('../../server/server.js');
@@ -16,7 +17,7 @@ const API_PREFIX = "/services/user/";
 const DEFAULT_HOURS = 24;
 const DEFAULT_DAYS = 1;
 const CHARGE_FACTOR = Constants.CFE.values.charge_factor;
-
+const emissionFactor = Constants.CFE.values.emission_factor;
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 const OPTIONS_XML2JS  = {
@@ -159,7 +160,6 @@ module.exports = function(Designatedmeter) {
                         }
                     });
                     serviceToCall = serviceToCall + "?period=" + dates.period;
-                    // console.log('service to call:', serviceToCall);
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
@@ -209,7 +209,6 @@ module.exports = function(Designatedmeter) {
                                     });
                                     dailyReadings.capacity = Math.min(maxDpPeak, parseFloat(commonFormula));
                                     dailyReadings.distribution = Math.min(maxDpMonth, parseFloat(commonFormula));
-
                                     service.updateAttribute(
                                         "dailyReadings",
                                         dailyReadings, (err, updated) => {
@@ -262,6 +261,502 @@ module.exports = function(Designatedmeter) {
         }
     );
 
+    Designatedmeter.carbonFootprint = function carbonFootprint(company_id, service_name, cb) {
+        /** returns a json object that includes the following data
+         *  consumption, generation, total,co2Limit
+         *  emissionFactor and co2e
+         *  Receives a company_id and a service name/device name as second parameter
+        */
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        const Services = app.loopback.getModel('Service');
+        let dR = new devicesRequests();
+        
+        let consumption;
+        let generation; 
+        let total;
+        const co2Limit = 25000;
+        let cO2Emissions;
+
+        //find the company designatedMeter
+        DesignatedMeter.find({
+            where: {
+                'company_id': company_id
+            }    
+        }).then(designatedMeter => {
+            designatedMeter = designatedMeter[0];
+            Services.find({
+                where: {
+                    'designatedMeterId': designatedMeter.id,
+                    'serviceName': service_name
+                }
+            }).then(service => {
+                //check if its service
+                if (service.length > 0) {
+                    service = service[0];
+                    Promise.all([
+                        //retrieve EPimp
+                        new Promise((resolve, reject) => {
+                            dR.getData(
+                                designatedMeter.hostname,
+                                EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                                API_PREFIX,
+                                service.devices,
+                                [
+                                    'EPimp'
+                                ]
+                            )
+                            .then(reading => {
+                                if(reading.recordGroup && reading.recordGroup.record){
+                                    let iterable = [];
+                                    if (!Array.isArray(reading.recordGroup.record.field)) {
+                                        iterable.push(reading.recordGroup.record.field);
+                                    } else {
+                                        iterable = reading.recordGroup.record.field;
+                                    }
+                                    let summatory = 0;
+                                    iterable.map(item => {
+                                        summatory += parseFloat(item.value._text);
+                                    });
+                                    resolve(summatory);
+                                } else {
+                                    resolve(0);
+                                }
+                            })
+                            .catch(err => {
+                                reject();
+                            })
+                        }),
+                        //retrieve EPgen
+                        new Promise((resolve, reject) => {
+                            if (service['generationDevices'] !== undefined) {
+                                dR.getData(
+                                    designatedMeter.hostname,
+                                    EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                                    API_PREFIX,
+                                    service.generationDevices,
+                                    [
+                                        'EPgen'
+                                ])    
+                            } else {
+                                generation = 0;
+                                resolve(generation);
+                            }
+                        })
+                        .then(reading => {
+                            if(reading === 0){
+                                return reading;
+                            }
+
+                            if(reading.recordGroup && reading.recordGroup.record){
+                                let iterable = [];
+                                if (!Array.isArray(reading.recordGroup.record.field)) {
+                                    iterable.push(reading.recordGroup.record.field);
+                                } else {
+                                    iterable = reading.recordGroup.record.field;
+                                }
+                                let summatory = 0;
+                                iterable.map(item => {
+                                    summatory += parseFloat(item.value._text);
+                                });
+                                resolve(summatory);
+                            } else {
+                                resolve(0);
+                            }
+                        })
+                    ])
+                    .then((data) => {
+                        consumption = data[0];
+                        generation = data[1];
+                        total = consumption - generation;
+                        cO2Emissions = emissionFactor * (parseFloat(consumption)/1000.0);
+                        let response = {
+                            consumption,
+                            generation,
+                            total,
+                            cO2Emissions,
+                            emissionFactor,
+                            co2Limit
+                        }
+                        //console.log(response);
+                        cb(null, response);
+                    })
+                    .catch(err => {
+                        console.log(err);
+                    });
+                } else {
+                    //if it's not a service it's a device
+                    let deviceName = service_name;
+                    let meter = designatedMeter.devices.find((device) => {
+                        return device.name == deviceName;
+                    });
+                    let isEPgenDevice;
+                    if (designatedMeter['generationDevices'] === undefined) {
+                        isEPgenDevice = false;
+                    } else {
+                        let aux;
+                        aux = designatedMeter.generationDevices.find((device) => {
+                            return device === deviceName;
+                        });
+                        if (aux === undefined) {
+                            isEPgenDevice = false;
+                        }  else {
+                            isEPgenDevice = true;
+                        }
+                    }
+
+                    Promise.all([
+                        //EPimp
+                        new Promise((resolve, reject) => {
+                            if(isEPgenDevice) {
+                                resolve(0);
+                                return;
+                            }
+                            dR.getData(
+                                designatedMeter.hostname,
+                                EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                                API_PREFIX,
+                                meter,
+                                [
+                                    'EPimp'
+                                ]
+                            )
+                            .then((reading) => {
+                                if(reading.recordGroup && reading.recordGroup.record){
+                                    let iterable = [];
+                                    if (!Array.isArray(reading.recordGroup.record.field)) {
+                                        iterable.push(reading.recordGroup.record.field);
+                                    } else {
+                                        iterable = reading.recordGroup.record.field;
+                                    }
+                                    let summatory = 0;
+                                    iterable.map(item => {
+                                        summatory += parseFloat(item.value._text);
+                                    });
+                                    resolve(summatory);
+                                } else {
+                                    resolve(0);
+                                }
+                            })
+                        }),
+                        //EPGEN
+                        new Promise((resolve, reject) => {
+                            if(!isEPgenDevice){
+                                resolve(0);
+                                return;
+                            }
+                            dR.getData(
+                                designatedMeter.hostname,
+                                EDS.dateFilterSetup(Constants.Meters.filters.dayAVG),
+                                API_PREFIX,
+                                meter,
+                                [
+                                    'EPgen'
+                                ]
+                            ).then((reading) => {
+                                if(reading.recordGroup && reading.recordGroup.record){
+                                    let iterable = [];
+                                    if (!Array.isArray(reading.recordGroup.record.field)) {
+                                        iterable.push(reading.recordGroup.record.field);
+                                    } else {
+                                        iterable = reading.recordGroup.record.field;
+                                    }
+                                    let summatory = 0;
+                                    iterable.map(item => {
+                                        summatory += parseFloat(item.value._text);
+                                    });
+                                    resolve(summatory);
+                                } else {
+                                    resolve(0);
+                                }
+                            })
+                        })
+
+                    ])
+                    .then((data) => {
+                        consumption = data[0];
+                        generation = data[1];
+                        total = consumption - generation;
+                        cO2Emissions = emissionFactor * (parseFloat(consumption)/1000.0);
+                        let response = {
+                            consumption,
+                            generation,
+                            total,
+                            cO2Emissions,
+                            emissionFactor,
+                            co2Limit
+                        }
+                        //console.log(response);
+                        cb(null, response);
+                    })
+                    .catch(error => {
+                        console.error(error);
+                    });
+                }
+            })
+        });
+    }
+
+    Designatedmeter.remoteMethod(
+        'carbonFootprint', {
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''},
+                { arg: 'service_name', type: 'string',  required: false, default: ''}
+            ],
+            returns: { arg: 'response', type: 'object' },
+            http: {path: '/carbonFootprint', verb: 'get'}
+        }
+    );
+
+    Designatedmeter.generation = function generation(company_id, service_name, device_name, cb) {
+        /** returns a json object that includes the following data
+             *  generation, selfConsumption, networkInjection
+             *  emissionFactor and co2e
+             *  Receives a company_id and a service name/device name as second parameter
+        */
+
+        if(service_name !== undefined && device_name !== undefined) {
+            return cb("Make a request for a service or a device, not both", null);
+        }
+
+        const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
+        const Services = app.loopback.getModel('Service');
+        let dR = new devicesRequests();
+        
+        //initialization
+        let generation = 0;
+        let generationValue = 0;
+        let selfConsumption = 0;
+        let selfConsumptionValue = 0;
+        let networkInjection = 0;
+        let networkInjectionValue = 0;
+        let co2e = 0;
+
+        //find the company designatedMeter
+        DesignatedMeter.find({
+            where: {
+                'company_id': company_id
+            },    
+            include: [
+                {
+                    relation: 'company'
+                }
+            ]
+        }).then(designatedMeter => {
+            if (designatedMeter === undefined || designatedMeter.length === 0) {
+                return cb("There's no company with " + company_id + " id");
+            }
+            designatedMeter = designatedMeter[0];
+
+            new Promise((resolve, reject) => {
+                if(service_name !== undefined) {
+                    Services.find({
+                        where: {
+                            'designatedMeterId': designatedMeter.id,
+                            'serviceName': service_name
+                        }
+                    }).then(service => {   
+                        if (service === undefined || service.length === 0) {
+                            return reject("There's not a service with " + company_id + " id and " + service_name + " name");
+                        } 
+                        service = service[0];
+                        return resolve(service.devices);
+                    });
+                } else if (device_name !== undefined) {
+                    let device = designatedMeter.devices.find(device => {
+                        return device.name === device_name;
+                    });
+                    if (device === undefined) {
+                        return reject("There's not a device with " + company_id + " id and " + device_name + " name");
+                    }
+                    return resolve([device]);
+                } else {
+                    return reject("There's not a service or device in the request");
+                }    
+            })
+            .then(devices => {
+                let EPgenDevices = [];
+                    
+                if (designatedMeter['generationDevices'] !== undefined || designatedMeter.generationDevices.length !== 0) {
+                    let dMEPgenDevices = new Set(designatedMeter.generationDevices);
+                    let tmpDevices = devices;
+                    devices = [];
+
+                    tmpDevices.forEach((device) => {
+                        if (dMEPgenDevices.has(device.name)) {
+                            EPgenDevices.push(device);
+                        } else {
+                            devices.push(device);
+                        }
+                    });
+                }
+                // console.log("devices:");
+                // console.log(devices);
+                // console.log("EPgenDevices: ");
+                // console.log(EPgenDevices);
+                
+                Promise.all([
+                    //generation
+                    new Promise((resolve, reject) => {
+                        let dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
+                        dates.period = 3600;
+
+                        dR.getData(
+                            designatedMeter.hostname,
+                            dates,
+                            API_PREFIX,
+                            EPgenDevices,
+                            [
+                                'EPGen'
+                            ]
+                        )
+                        .then(reading => {
+                            if (reading && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }
+                                async.eachSeries(records, async item => {
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    const rate = CFE_rates.rate;
+
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatory = 0;
+                                    iterable.map(item => {
+                                        summatory += parseFloat(item.value._text);
+                                    });
+                                    generation += summatory;
+                                    generationValue += summatory * rate;
+    
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    resolve({generation, generationValue}); 
+                                });
+                            } else {
+                                resolve({generation, generationValue});
+                            }
+                            
+                        })
+                        .catch(err => {
+                            return cb(err, null);
+                        });
+                    }),
+                    //networkInjection
+                    new Promise((resolve, reject) => {
+                        let dates = EDS.dateFilterSetup(Constants.Meters.filters.dayAVG);
+                        dates.period = 3600;
+
+                        dR.getData(
+                            designatedMeter.hostname,
+                            dates,
+                            API_PREFIX,
+                            devices,
+                            [
+                                'EPexp',
+                                'EPimp'
+                            ]
+                        )
+                        .then((reading) => {
+                            if (reading && reading.recordGroup && reading.recordGroup && reading.recordGroup.record) {
+                                let records = [];
+                                if (!Array.isArray(reading.recordGroup.record)) {
+                                    records.push(reading.recordGroup.record)
+                                } else {
+                                    records = reading.recordGroup.record;
+                                }
+                                async.eachSeries(records, async item => {
+                                    const day = item.dateTime._text.slice(0,2);
+                                    const month = item.dateTime._text.slice(2,4);
+                                    const year = item.dateTime._text.slice(4,8);
+                                    const hour = item.dateTime._text.slice(8,10);
+                                    const minute = item.dateTime._text.slice(10,12);
+                                    const second = item.dateTime._text.slice(12,14);
+                                    const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
+
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    const rate = CFE_rates.rate;
+
+                                    let iterable = [];
+                                    if (!Array.isArray(item.field)) {
+                                        iterable.push(item.field);
+                                    } else {
+                                        iterable = item.field;
+                                    }
+                                    let summatoryEPimp = 0;
+                                    let summatoryEPexp = 0;
+                                    let varName;
+                                    iterable.map(item => {
+                                        varName = item.id._text.split(".")[1];
+                                        if (varName == "EPimp") {
+                                            summatoryEPimp += parseFloat(item.value._text);
+                                        } else if (varName == "EPexp") {
+                                            summatoryEPexp += parseFloat(item.value._text);
+                                        } 
+                                    });
+                                    networkInjection += summatoryEPexp;
+                                    networkInjectionValue += summatoryEPexp * rate;
+                                    co2e += emissionFactor * (summatoryEPimp / 1000);
+
+                                }, err => {
+                                    if (err) return cb(err, null);
+                                    resolve({
+                                        networkInjection,
+                                        co2e
+                                    });    
+                                });
+                            }
+                        }).catch(err => {
+                            return cb(err, null);
+                        })
+                    })
+                ])
+                .then((res) => {
+                    selfConsumptionValue = generationValue - networkInjectionValue;
+                    selfConsumption = generation - networkInjection;
+                    cb(null, {
+                        generation,
+                        networkInjection,
+                        selfConsumption,
+                        co2e,
+                        emissionFactor,
+                        generationValue,
+                        networkInjectionValue,
+                        selfConsumptionValue
+                    });
+                })
+            })
+            .catch(err => {
+                return cb(err, null);
+            })
+        });
+    }
+
+    Designatedmeter.remoteMethod(
+        'generation', {
+            accepts: [
+                { arg: 'company_id', type: 'string',  required: false, default: ''},
+                { arg: 'service_name', type: 'string',  required: false, default: ''},
+                { arg: 'device_name', type: 'string',  required: false, default: ''}
+            ],
+            returns: { arg: 'response', type: 'object' },
+            http: {path: '/generation', verb: 'get'}
+        }
+    );
+    
     Designatedmeter.epimpHistory = function epimpHistory(company_id, cb) {
         Meters.getActivesAssigned(company_id, function(err, meters) {
             async.eachSeries(meters, function(meter, next){
