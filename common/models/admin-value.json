@@ -39,6 +39,17 @@
         "type": "number",
         "required": true,
         "default": 0
+      },
+      "distributionPrice": {
+        "type": "number",
+        "required": true,
+        "default": 0
+      },
+      "GDMTO": {
+        "type": "object"
+      },
+      "GDMTH": {
+        "type": "object"
       }
     },
     "validations": [],
