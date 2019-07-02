@@ -17,32 +17,27 @@
       },
       "basePrice": {
         "type": "number",
-        "required": true,
+        "required": false,
         "default": 0
       },
       "middlePrice": {
         "type": "number",
-        "required": true,
+        "required": false,
         "default": 0
       },
       "peakPrice": {
         "type": "number",
-        "required": true,
+        "required": false,
         "default": 0
       },
       "capacityPrice": {
         "type": "number",
-        "required": true,
+        "required": false,
         "default": 0
       },
       "distributionPrice": {
         "type": "number",
-        "required": true,
-        "default": 0
-      },
-      "distributionPrice": {
-        "type": "number",
-        "required": true,
+        "required": false,
         "default": 0
       },
       "GDMTO": {
