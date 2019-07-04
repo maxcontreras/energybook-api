@@ -24,11 +24,8 @@ module.exports = function(AdminValue) {
                 }
             ).then(value => {
                 if (value) {
-                    console.log("..............................");
-                    console.log("la fecha ya existe");
                     if(value["GDMTH"] === undefined || value["GDMTH"] === null || Object.keys(value["GDMTH"]).length === 0) {
                         value["GDMTH"] = {};
-                        console.log("no tiene gdmth");
                         value.GDMTH.basePrice = Constants.CFE.values.consumption_price.base;
                         value.GDMTH.middlePrice = Constants.CFE.values.consumption_price.middle;
                         value.GDMTH.peakPrice = Constants.CFE.values.consumption_price.peak;
@@ -37,16 +34,12 @@ module.exports = function(AdminValue) {
                     }
                     if (value["GDMTO"] === undefined || value["GDMTO"] === null || Object.keys(value["GDMTO"]).length === 0) {
                         value["GDMTO"] = {};
-                        console.log("no tiene gdmto");
                         value.GDMTO.ordinaryPrice = Constants.CFE.values.GDMTO.prices.ordinary;
                         value.GDMTO.capacityPrice = Constants.CFE.values.GDMTO.prices.capacity;
                         value.GDMTO.distributionPrice = Constants.CFE.values.GDMTO.prices.distribution;
                     }
-                    console.log(value);
                     return cb(null, value);
                 } else {
-                    console.log("..............................");
-                    console.log("no hay fecha");
                     const result = {
                         basePrice: Constants.CFE.values.consumption_price.base,
                         middlePrice: Constants.CFE.values.consumption_price.middle,
@@ -66,7 +59,6 @@ module.exports = function(AdminValue) {
                             distributionPrice: Constants.CFE.values.GDMTO.prices.distribution
                         }
                     }
-                    console.log(result);
                     return cb(null, result);
                 }
             });
@@ -85,9 +77,6 @@ module.exports = function(AdminValue) {
 
 
     AdminValue.createOrUpdatePrices = function createOrUpdatePrices(date, city, payload, tariffType, cb) {
-        console.log(tariffType);
-        console.log("payload");
-        console.log(payload);
         let searchDate = moment(date).format();
         let endDate = moment(searchDate).add(1, 'day').format();
         if ((tariffType === "GDMTH" || tariffType === "GDMTO") &&
@@ -118,8 +107,6 @@ module.exports = function(AdminValue) {
                 }
             ).then((value) => {
                 if (value) {
-                    console.log(value);
-                    console.log(tariffType);
                     if(value[tariffType] === undefined) {
                         value[tariffType] = {};
                     }
@@ -141,11 +128,9 @@ module.exports = function(AdminValue) {
                     
                     value.save((err, newVal) => {
                         if (err) return cb({ status: 500, message: "CFE data could not be saved" });
-                        console.log("save");
                         //fills data with constants if there's not a saved value in the db
                         if(newVal["GDMTH"] === undefined || newVal["GDMTH"] === null || Object.keys(newVal["GDMTH"]).length === 0) {
                             newVal["GDMTH"] = {};
-                            console.log("no tiene gdmth");
                             newVal.GDMTH.basePrice = Constants.CFE.values.consumption_price.base;
                             newVal.GDMTH.middlePrice = Constants.CFE.values.consumption_price.middle;
                             newVal.GDMTH.peakPrice = Constants.CFE.values.consumption_price.peak;
@@ -154,7 +139,6 @@ module.exports = function(AdminValue) {
                         }
                         if (newVal["GDMTO"] === undefined || newVal["GDMTO"] === null || Object.keys(newVal["GDMTO"]).length === 0) {
                             newVal["GDMTO"] = {};
-                            console.log("no tiene gdmto");
                             newVal.GDMTO.ordinaryPrice = Constants.CFE.values.GDMTO.prices.ordinary;
                             newVal.GDMTO.capacityPrice = Constants.CFE.values.GDMTO.prices.capacity;
                             newVal.GDMTO.distributionPrice = Constants.CFE.values.GDMTO.prices.distribution;
