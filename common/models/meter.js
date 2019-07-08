@@ -527,14 +527,12 @@ module.exports = function(Meter) {
                                         if (prevDay !== date.dayOfYear()) {
                                             if (prevDay != null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                                read.cost = dailyCosts.toFixed(2);
+                                                read.cost = dailyCosts;
                                                 read.rate = "diario";
                                                 if (tariff_type === "GDMTH") {
                                                     rateCosts.base = rateCosts.base.toFixed(2);
                                                     rateCosts.middle = rateCosts.middle.toFixed(2);
                                                     rateCosts.peak = rateCosts.peak.toFixed(2);    
-                                                } else if (tariff_type === "GDMTO"){
-                                                    rateCosts.ordinary = rateCosts.ordinary.toFixed(2);
                                                 }
                                                 read.rateCosts = rateCosts;
                                                 dailyValues.push(read);
@@ -572,23 +570,19 @@ module.exports = function(Meter) {
                                         if (prevDay != null) {
                                             let read = {};
                                             read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                            read.cost = dailyCosts.toFixed(2);
+                                            read.cost = dailyCosts;
                                             read.rate = "diario";
                                             if(tariff_type === "GDMTH") {
                                                 rateCosts.base = rateCosts.base.toFixed(2);
                                                 rateCosts.middle = rateCosts.middle.toFixed(2);
                                                 rateCosts.peak = rateCosts.peak.toFixed(2);    
-                                            } else {
-                                                rateCosts.ordinary = rateCosts.ordinary.toFixed(2);
                                             }
                                             read.rateCosts = rateCosts;
                                             dailyValues.push(read);
                                         }
-                                        console.log(dailyValues);
                                         // If interval is daily, replace values with dailyValues
                                         cb(null, dailyValues);
                                     } else {
-                                        console.log(values);
                                         cb(null, values);
                                     }
                                 });
