@@ -41,11 +41,6 @@ module.exports = function(AdminValue) {
                     return cb(null, value);
                 } else {
                     const result = {
-                        basePrice: Constants.CFE.values.consumption_price.base,
-                        middlePrice: Constants.CFE.values.consumption_price.middle,
-                        peakPrice: Constants.CFE.values.consumption_price.peak,
-                        capacityPrice: Constants.CFE.values.capacity_price,
-                        distributionPrice: Constants.CFE.values.distribution_price,
                         GDMTH: {
                             basePrice: Constants.CFE.values.consumption_price.base,
                             middlePrice: Constants.CFE.values.consumption_price.middle,
@@ -115,11 +110,6 @@ module.exports = function(AdminValue) {
                         value[tariffType].middlePrice = payload.middle;
                         value[tariffType].peakPrice = payload.peak;
 
-                        value.basePrice = payload.base;
-                        value.middlePrice = payload.middle;
-                        value.peakPrice = payload.peak;
-                        value.capacityPrice = payload.capacity;
-                        value.distributionPrice = payload.distribution;
                     } else if (tariffType === "GDMTO") {
                         value[tariffType].ordinaryPrice = parseFloat(payload.ordinary);
                     }
@@ -149,11 +139,6 @@ module.exports = function(AdminValue) {
                     let obj = {
                         date: new Date(searchDate),
                         city,
-                        basePrice: payload.base,
-                        middlePrice: payload.middle,
-                        peakPrice: payload.peak,
-                        capacityPrice: payload.capacity,
-                        distributionPrice: payload.distribution,
                         GDMTH: {},
                         GDMTO: {}
                     };
