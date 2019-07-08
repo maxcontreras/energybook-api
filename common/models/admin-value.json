@@ -15,31 +15,6 @@
         "type": "string",
         "required": true
       },
-      "basePrice": {
-        "type": "number",
-        "required": false,
-        "default": 0
-      },
-      "middlePrice": {
-        "type": "number",
-        "required": false,
-        "default": 0
-      },
-      "peakPrice": {
-        "type": "number",
-        "required": false,
-        "default": 0
-      },
-      "capacityPrice": {
-        "type": "number",
-        "required": false,
-        "default": 0
-      },
-      "distributionPrice": {
-        "type": "number",
-        "required": false,
-        "default": 0
-      },
       "GDMTO": {
         "type": "object"
       },
