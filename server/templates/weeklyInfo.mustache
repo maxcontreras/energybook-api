@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .table {
+      font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+      .table td, .table th {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+
+      .table tr:hover {background-color: #ddd;}
+
+      .table th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #4CAF50;
+        color: white;
+      } 
+
+    </style>  
+  </head>
+  <body style="background-color: aliceblue">
+    <br>
+    <div style="  
+      margin: auto;
+      width: 50%;
+      padding: 10px;
+      background-color: white;
+      border-radius: 5px;
+      box-shadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.03);
+      font-size: 14px;
+      ">
+      <h1>Estimado(a), {{user.name}}:</h1>
+      <p>
+        Te adjuntamos un resumen semanal de tu cuenta en <b>iEnergybook</b>.
+      </p>
+      <br>
+      <div>
+        <div style="
+            border-style: solid;
+            border-radius: 5px;
+            border-width: 1px;
+            border-color: lightgray;
+            ">
+          <h2 style="padding: 0px 0px 0px 10px;
+            ">
+            Costos:
+          </h2>
+          <div style="padding: 0px 0px 0px 10px;
+              margin: 0px 10px 0px 10px">
+            <h3>
+              Por servicios
+            </h3>
+            <div style="list-style: none; padding-left: 10px !important;">
+                <table style="width:100%; padding-left: 10px" class="table">
+                  <tr>
+                    <th>Servicio</th>
+                    <th>Energía</th>
+                    <th>Costo</th>
+                  </tr>
+                  {{#services}}
+                  <tr>
+                    <td>{{name}}</td>
+                    <td>{{consumption.energy}}kWh</td>
+                    <td>${{consumption.cost}}</td>
+                  </tr>
+                  {{/services}}
+                </table>
+              <br>
+            </div>
+            <h3>
+              Por dispositivos
+            </h3>
+            <div style="list-style: none; padding-left: 10px !important;">
+              <table style="width:100%; padding-left: 10px" class="table">
+                <tr>
+                  <th>Dispositivo</th>
+                  <th>Energía</th>
+                  <th>Costo</th>
+                </tr>
+                {{#devices}}
+                  <tr>
+                    <td>{{name}}</td>
+                    <td>{{consumption.energy}}kWh</td>
+                    <td>${{consumption.cost}}</td>
+                  </tr>
+                {{/devices}}
+              </table>
+              <br>
+            </div>
+          </div>
+        </div>
+        <br>
+        <div style="
+          border-style: solid;
+          border-radius: 5px;
+          border-width: 1px;
+          border-color: lightgray;
+          ">
+          <h2 style="padding: 0px 0px 0px 10px;">
+            Generación:
+          </h2>
+          <div style="padding: 0px 0px 0px 10px;
+          margin: 0px 10px 0px 10px">
+            <h3>
+              Por servicios
+            </h3>
+            <div style="list-style: none; padding-left: 10px !important;">
+              <table style="width:100%; padding-left: 10px" class="table">
+                <tr>
+                  <th>Servicio</th>
+                  <th>Categoría</th>
+                  <th>Energía</th>
+                  <th>Costo</th>
+                </tr>
+                {{#services}}
+                  <tr>
+                    <td style="border-bottom: none">{{name}}</td>
+                    <td>generación</td>
+                    <td>{{generation.energy}}kWh</td>
+                    <td>${{generation.cost}}</td>
+                  </tr>
+                  <tr>
+                    <td style="border-top: none; border-bottom: none"></td>
+                    <td>inyección a la red</td>
+                    <td>{{netInjection.energy}}kW</td>
+                    <td>${{netInjection.cost}}</td>
+                  </tr>
+                  <tr>
+                    <td style="border-top: none;"></td>
+                    <td>autoconsumo</td>
+                    <td>{{selfConsumption.energy}}kW</td>
+                    <td>${{selfConsumption.cost}}</td>
+                  </tr>
+                {{/services}}
+              </table>
+              <br>
+            </div>
+            <h3>
+              Por dispositivos
+            </h3>
+            <div style="list-style: none; padding-left: 10px !important;">
+              <table style="width:100%; padding-left: 10px" class="table">
+                <tr>
+                  <th>Dispositivo</th>
+                  <th>Categoría</th>
+                  <th>Energía</th>
+                  <th>Costo</th>
+                </tr>
+                {{#devices}}
+                  <tr>
+                    <td style="border-bottom: none">{{name}}</td>
+                    <td>generación</td>
+                    <td>{{generation.energy}}kWh</td>
+                    <td>${{generation.cost}}</td>
+                  </tr>
+                  <tr>
+                    <td style="border-bottom: none; border-top: none;"></td>
+                    <td >inyección a la red</td>
+                    <td>{{netInjection.energy}}kW</td>
+                    <td>${{netInjection.cost}}</td>
+                  </tr>
+                  <tr>
+                    <td style="border-top: none;"></td>
+                    <td>autoconsumo</td>
+                    <td>{{selfConsumption.energy}}kW</td>
+                    <td>${{selfConsumption.cost}}</td>
+                  </tr>
+                {{/devices}}
+              </table>  
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="  
+      margin: auto;
+      width: 30%;
+      padding: 10px;
+      padding-top: 5px;
+      text-align: center;">
+      <span style="margin-top: 8px;
+                  cursor: pointer;
+                  font-size: 12px;">
+        <a href="http://app.ienergybook.com" style="text-decoration: none">iEnergybook </a> | <a href="mailto:	hola@ienergybook.com
+  " style="text-decoration: none">hola@ienergybook.com</a>
+      </span>
+    </div>
+
+    <br>
+  </body>
+</html>

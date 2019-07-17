@@ -465,12 +465,13 @@ module.exports = function(Meter) {
                         serviceToCall += "?var=" + device + ".EPimp";
                     }
                     serviceToCall += "?period=" + dates.period;
+                    //console.log(serviceToCall);
                     xhr.open('GET', serviceToCall);
                     setTimeout(() => {
                         if (xhr.readyState < 3) {
                             xhr.abort();
                         }
-                    }, 8000);
+                    }, 20000);
                     xhr.onload = function() {
                         if (xhr.readyState === 4 && xhr.status === 200) {
                             const reading = Converter.xml2js(xhr.responseText, OPTIONS_XML2JS);
@@ -549,7 +550,8 @@ module.exports = function(Meter) {
                                     } else {
                                         // Result object
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
-                                        read.cost = (sum*rate).toFixed(2);
+                                        read.cost = (sum*rate);
+                                        read.consumption = sum;
                                         read.rate = rate_type;
                                         values.push(read);
                                         Promise.resolve();
@@ -636,7 +638,7 @@ module.exports = function(Meter) {
             if (!meter) return cb({status: 400, message: "Error while consulting meter variables"}, null);
             
             new Promise((resolve, reject) => {
-                if(service !== undefined) {
+                if(service !== undefined && service !== null) {
                     Services.find({
                         where: {
                             'designatedMeterId': meter.id,
@@ -649,11 +651,11 @@ module.exports = function(Meter) {
                         service = res[0];
                         return resolve(service.devices);
                     });
-                } else if (device !== undefined) {
+                } else if (device !== undefined && device !== null) {
                     let foundDevice = meter.devices.find(tmpDevice => {
                         return tmpDevice.name === device;
                     });
-                    if (foundDevice === undefined) {
+                    if (foundDevice === undefined || foundDevice === null) {
                         return reject("There's not a device with " + id + " id and " + device + " name");
                     }
                     return resolve([foundDevice]);
@@ -681,11 +683,11 @@ module.exports = function(Meter) {
                     });
                 }
                 //variable
-                // 0 - generation, 1 - selfConsumption, 2 - networkInjection
+                // 0 - generation, 1 - selfConsumption, 2 - networkInjection, 3 all
                 Promise.all([
                     //generation
                     new Promise((resolve, reject) => {
-                        if (variable !== 0 && variable !== 1) return resolve();
+                        if (variable === 2) return resolve();
                         dR.getData(
                             meter.hostname,
                             dates,
@@ -706,6 +708,13 @@ module.exports = function(Meter) {
                                 //stores the values per period
                                 let values = [];
                                 let periodValue = 0;
+                                let periodCosts = 0;
+
+                                let rateCosts = {
+                                    'base': 0,
+                                    'middle': 0,
+                                    'peak': 0
+                                }
                                 async.eachSeries(records, async item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
@@ -715,8 +724,12 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    let date = moment.parseZone(tmp_date).tz(timezone);
                                     
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
+                                    let rate = CFE_rates.rate;
+                                    const rate_type = CFE_rates.rate_type;
+                                    let date = CFE_rates.date;
+
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {
                                         iterable.push(item.field);
@@ -733,31 +746,61 @@ module.exports = function(Meter) {
                                         if (prevPeriod !== date.dayOfYear()) {
                                             if (prevPeriod !== null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                                read.value = periodValue.toFixed(2);
+                                                read.value = parseFloat(periodValue.toFixed(2));
+                                                rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                                rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                                rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                                read.rate = "diario";
+                                                read.rateCosts = rateCosts;
+                                                read.cost = parseFloat(periodCosts.toFixed(2));
                                                 values.push(read);
                                             }
                                             prevDate = date;
                                             prevPeriod = date.dayOfYear();
                                             periodValue = 0;
+                                            periodCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
                                         }
                                         periodValue += summatory;
+                                        periodCosts += summatory * rate;
+                                        rateCosts[rate_type] += summatory * rate;
                                         Promise.resolve();
                                     } else if (interval === 2) { //per month
                                         if (prevPeriod !== date.month()) {
                                             if (prevPeriod != null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                                read.value = periodValue.toFixed(2);
+                                                read.value = parseFloat(periodValue.toFixed(2));
+                                                rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                                rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                                rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                                read.rate = "mes";
+                                                read.rateCosts = rateCosts;
+                                                read.cost = parseFloat(periodCosts.toFixed(2));
                                                 values.push(read);
                                             }
                                             prevDate = date;
                                             prevPeriod = date.month();
                                             periodValue = 0;
+                                            periodCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
                                         }
                                         periodValue += summatory;
+                                        periodCosts += summatory * rate;
+                                        rateCosts[rate_type] += summatory * rate;
                                         Promise.resolve();
                                     } else { //per hour
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
                                         read.value = summatory;
+                                        read.cost = parseFloat((summatory * rate).toFixed(2));
+                                        read.rate_type = rate_type;
                                         values.push(read);
                                         Promise.resolve();
                                     }
@@ -766,8 +809,18 @@ module.exports = function(Meter) {
                                     if (interval === 1 || interval === 2) {
                                         if (prevPeriod != null) {
                                             let read = {};
+                                            if(interval == 1) {
+                                                read.type = "diario"
+                                            } else {
+                                                read.type = "mes"
+                                            }
                                             read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                            read.value = periodValue.toFixed(2);
+                                            read.value = parseFloat(periodValue.toFixed(2));
+                                            rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                            rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                            rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                            read.rateCosts = rateCosts;
+                                            read.cost = parseFloat(periodCosts.toFixed(2));
                                             values.push(read);
                                         }
                                     }
@@ -778,9 +831,9 @@ module.exports = function(Meter) {
                             }
                         })                            
                     }),
-                    //networkInjection
+                    //netInjection
                     new Promise((resolve, reject) => {
-                        if (variable !== 2 && variable !== 1) return resolve();
+                        if (variable === 0) return resolve();
                         dR.getData(
                             meter.hostname,
                             dates,
@@ -801,6 +854,13 @@ module.exports = function(Meter) {
                                 //stores the values per period
                                 let values = [];
                                 let periodValue = 0;
+                                let periodCosts = 0;
+                                let rateCosts = {
+                                    'base': 0,
+                                    'middle': 0,
+                                    'peak': 0
+                                }
+                                
                                 async.eachSeries(records, async item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
@@ -810,7 +870,11 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    let date = moment.parseZone(tmp_date).tz(timezone);
+                                    
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
+                                    let rate = CFE_rates.rate;
+                                    const rate_type = CFE_rates.rate_type;
+                                    let date = CFE_rates.date;
                                     
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {
@@ -828,31 +892,61 @@ module.exports = function(Meter) {
                                         if (prevPeriod !== date.dayOfYear()) {
                                             if (prevPeriod !== null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                                read.value = periodValue.toFixed(2);
+                                                read.value = parseFloat(periodValue.toFixed(2));
+                                                read.type = "diario";
+                                                rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                                rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                                rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                                read.rateCosts = rateCosts;
+                                                read.cost = parseFloat(periodCosts.toFixed(2));
                                                 values.push(read);
                                             }
                                             prevDate = date;
                                             prevPeriod = date.dayOfYear();
                                             periodValue = 0;
+                                            periodCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
                                         }
                                         periodValue += summatory;
+                                        rateCosts[rate_type] += summatory * rate;
+                                        periodCosts += summatory * rate;
                                         Promise.resolve();
                                     } else if (interval === 2) { //per month
                                         if (prevPeriod !== date.month()) {
                                             if (prevPeriod != null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
                                                 read.value = periodValue.toFixed(2);
+                                                read.type = "mes";
+                                                rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                                rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                                rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                                read.rateCosts = rateCosts;
+                                                read.cost = parseFloat(periodCosts.toFixed(2));
                                                 values.push(read);
                                             }
                                             prevDate = date;
                                             prevPeriod = date.month();
                                             periodValue = 0;
+                                            periodCosts = 0;
+                                            rateCosts = {
+                                                'base': 0,
+                                                'middle': 0,
+                                                'peak': 0
+                                            }
                                         }
                                         periodValue += summatory;
+                                        rateCosts[rate_type] += summatory * rate;
+                                        periodCosts += summatory * rate;
                                         Promise.resolve();
                                     } else { //per hour
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
                                         read.value = summatory;
+                                        read.cost = parseFloat((summatory * rate).toFixed(2));
+                                        read.rate_type = rate_type;
                                         values.push(read);
                                         Promise.resolve();
                                     }
@@ -862,8 +956,18 @@ module.exports = function(Meter) {
                                     if (interval === 1 || interval === 2) {
                                         if (prevPeriod != null) {
                                             let read = {};
+                                            if(interval == 1) {
+                                                read.type = "diario"
+                                            } else {
+                                                read.type = "mes"
+                                            }
                                             read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                            read.value = periodValue.toFixed(2);
+                                            read.value = parseFloat(periodValue.toFixed(2));
+                                            rateCosts.base = parseFloat(rateCosts.base.toFixed(2));
+                                            rateCosts.middle = parseFloat(rateCosts.middle.toFixed(2));
+                                            rateCosts.peak = parseFloat(rateCosts.peak.toFixed(2));
+                                            read.rateCosts = rateCosts;
+                                            read.cost = parseFloat(periodCosts.toFixed(2));
                                             values.push(read);
                                         }
                                     } 
@@ -878,20 +982,33 @@ module.exports = function(Meter) {
                 .then(res => {
                     if (variable === 0) {
                         return cb(null, res[0]);
-                    } else if (variable === 1) {
+                    } else if (variable === 2) {
+                        return cb(null, res[1]);
+                    } else if (variable === 1 || variable === 3) {
                         let selfConsumptionArr = [];
                         let auxValue;
+                        let auxCost;
                         res[1].forEach((item, i) => {
                             if(res[0][i] !== undefined) {
                                 auxValue = (res[0][i].value - item.value);
+                                auxCost = (res[0][i].cost - item.cost);
                             } else {
                                 auxValue = 0 - item.value;
+                                auxCost = 0 - item.value;
                             }
-                            selfConsumptionArr.push({date: item.date, value: auxValue});
+                            selfConsumptionArr.push({date: item.date, value: auxValue, cost: auxCost});
                         });
-                        return cb(null, selfConsumptionArr);
-                    } else if (variable === 2) {
-                        return cb(null, res[1]);
+                        if (variable === 1)
+                            return cb(null, selfConsumptionArr);
+                        else if (variable === 3) {
+                            return cb(null, {
+                                "generation": res[0],
+                                "selfConsumption": selfConsumptionArr,
+                                "netInjection": res[1] 
+                            })
+                        }
+                    } else {
+                        cb("You haven't chosen a correct variable", null);
                     }
                 })
                 .catch(err => {

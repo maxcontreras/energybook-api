@@ -514,7 +514,7 @@ module.exports = function(Designatedmeter) {
              *  Receives a company_id and a service name/device name as second parameter
         */
 
-        if(service_name !== undefined && device_name !== undefined) {
+        if((service_name !== undefined && service_name !== null) && (device_name !== undefined) && device_name !== null) {
             return cb("Make a request for a service or a device, not both", null);
         }
 
@@ -546,9 +546,9 @@ module.exports = function(Designatedmeter) {
                 return cb("There's no company with " + company_id + " id");
             }
             designatedMeter = designatedMeter[0];
-
+            
             new Promise((resolve, reject) => {
-                if(service_name !== undefined) {
+                if(service_name !== undefined && service_name !== null) {
                     Services.find({
                         where: {
                             'designatedMeterId': designatedMeter.id,
@@ -561,7 +561,7 @@ module.exports = function(Designatedmeter) {
                         service = service[0];
                         return resolve(service.devices);
                     });
-                } else if (device_name !== undefined) {
+                } else if (device_name !== undefined && device_name !== null) {
                     let device = designatedMeter.devices.find(device => {
                         return device.name === device_name;
                     });
@@ -641,7 +641,6 @@ module.exports = function(Designatedmeter) {
                                     });
                                     generation += summatory;
                                     generationValue += summatory * rate;
-    
                                 }, err => {
                                     if (err) return cb(err, null);
                                     resolve({generation, generationValue}); 
@@ -671,13 +670,14 @@ module.exports = function(Designatedmeter) {
                             ]
                         )
                         .then((reading) => {
-                            if (reading && reading.recordGroup && reading.recordGroup && reading.recordGroup.record) {
+                            if (reading && reading.recordGroup && reading.recordGroup.record) {
                                 let records = [];
                                 if (!Array.isArray(reading.recordGroup.record)) {
                                     records.push(reading.recordGroup.record)
                                 } else {
                                     records = reading.recordGroup.record;
                                 }
+                                
                                 async.eachSeries(records, async item => {
                                     const day = item.dateTime._text.slice(0,2);
                                     const month = item.dateTime._text.slice(2,4);
@@ -718,6 +718,8 @@ module.exports = function(Designatedmeter) {
                                         co2e
                                     });    
                                 });
+                            } else {
+                                resolve();
                             }
                         }).catch(err => {
                             return cb(err, null);
