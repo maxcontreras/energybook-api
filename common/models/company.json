@@ -11,6 +11,11 @@
       "type": "string",
       "required": true
     },
+    "tariff_type": {
+      "type": "string",
+      "required": true,
+      "default": "GDMTH"
+    },
     "legal_name": {
       "type": "string",
       "required": true

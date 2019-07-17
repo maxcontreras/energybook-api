@@ -73,6 +73,13 @@
                 "base": 1.1030,
                 "middle": 2.0062,
                 "peak": 2.2633
+            },
+            "GDMTO": {
+                "prices": {
+                    "ordinary": 1.269,
+                    "distribution": 150,
+                    "capacity":  269.65
+                }
             }
         },
         "datePeriods": [

@@ -15,30 +15,11 @@
         "type": "string",
         "required": true
       },
-      "basePrice": {
-        "type": "number",
-        "required": true,
-        "default": 0
+      "GDMTO": {
+        "type": "object"
       },
-      "middlePrice": {
-        "type": "number",
-        "required": true,
-        "default": 0
-      },
-      "peakPrice": {
-        "type": "number",
-        "required": true,
-        "default": 0
-      },
-      "capacityPrice": {
-        "type": "number",
-        "required": true,
-        "default": 0
-      },
-      "distributionPrice": {
-        "type": "number",
-        "required": true,
-        "default": 0
+      "GDMTH": {
+        "type": "object"
       }
     },
     "validations": [],
