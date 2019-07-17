@@ -625,8 +625,7 @@ module.exports = function(Designatedmeter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-
-                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company().city, designatedMeter.company().tariff_type);
                                     const rate = CFE_rates.rate;
 
                                     let iterable = [];
@@ -686,8 +685,8 @@ module.exports = function(Designatedmeter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-
-                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company.city);
+                                    
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, designatedMeter.company().city, designatedMeter.company().tariff_type);
                                     const rate = CFE_rates.rate;
 
                                     let iterable = [];

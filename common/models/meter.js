@@ -382,7 +382,7 @@ module.exports = function(Meter) {
                                 const second = item.dateTime._text.slice(12,14);
                                 const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
 
-                                const rate_type = EDS.getCFERateType(tmp_date);
+                                const rate_type = EDS.getCFEGDMTHRateType(tmp_date);
 
                                 if (variable === 'DP') {
                                     stdReading.value /= 1000;
@@ -495,6 +495,9 @@ module.exports = function(Meter) {
                                 }
                                 // Saves values grouped by day interval
                                 let dailyValues = [];
+
+                                let tariff_type = meter.company().tariff_type;
+
                                 async.eachSeries(records, async item => {
                                     let read = {};
                                     const day = item.dateTime._text.slice(0,2);
@@ -504,12 +507,10 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-
-                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
+                                    let date = moment.parseZone(tmp_date).tz(timezone);
+                                    let CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city, tariff_type);
                                     const rate = CFE_rates.rate;
-                                    const rate_type = CFE_rates.rate_type;
-                                    let date = CFE_rates.date;
-
+                                    const rate_type = CFE_rates.rate_type;    
                                     let iterable = [];
                                     if (!Array.isArray(item.field)) {
                                         iterable.push(item.field);
@@ -526,21 +527,29 @@ module.exports = function(Meter) {
                                         if (prevDay !== date.dayOfYear()) {
                                             if (prevDay != null) {
                                                 read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                                read.cost = dailyCosts.toFixed(2);
+                                                read.cost = dailyCosts;
                                                 read.rate = "diario";
-                                                rateCosts.base = rateCosts.base.toFixed(2);
-                                                rateCosts.middle = rateCosts.middle.toFixed(2);
-                                                rateCosts.peak = rateCosts.peak.toFixed(2);
+                                                if (tariff_type === "GDMTH") {
+                                                    rateCosts.base = rateCosts.base.toFixed(2);
+                                                    rateCosts.middle = rateCosts.middle.toFixed(2);
+                                                    rateCosts.peak = rateCosts.peak.toFixed(2);    
+                                                }
                                                 read.rateCosts = rateCosts;
                                                 dailyValues.push(read);
                                             }
                                             prevDate = date;
                                             prevDay = date.dayOfYear();
                                             dailyCosts = 0;
-                                            rateCosts = {
-                                                'base': 0,
-                                                'middle': 0,
-                                                'peak': 0
+                                            if (tariff_type === "GDMTH") {
+                                                rateCosts = {
+                                                    'base': 0,
+                                                    'middle': 0,
+                                                    'peak': 0
+                                                }    
+                                            } else if(tariff_type === "GDMTO") {
+                                                rateCosts = {
+                                                    "ordinary": 0
+                                                }
                                             }
                                         }
                                         dailyCosts += sum * rate;
@@ -549,7 +558,8 @@ module.exports = function(Meter) {
                                     } else {
                                         // Result object
                                         read.date = EDS.parseDate(date.format('YYYY-MM-DD HH:mm:ss'));
-                                        read.cost = (sum*rate).toFixed(2);
+                                        read.cost = (sum*rate);
+                                        read.consumption = sum;
                                         read.rate = rate_type;
                                         values.push(read);
                                         Promise.resolve();
@@ -560,11 +570,13 @@ module.exports = function(Meter) {
                                         if (prevDay != null) {
                                             let read = {};
                                             read.date = EDS.parseDate(prevDate.format('YYYY-MM-DD HH:mm:ss'));
-                                            read.cost = dailyCosts.toFixed(2);
+                                            read.cost = dailyCosts;
                                             read.rate = "diario";
-                                            rateCosts.base = rateCosts.base.toFixed(2);
-                                            rateCosts.middle = rateCosts.middle.toFixed(2);
-                                            rateCosts.peak = rateCosts.peak.toFixed(2);
+                                            if(tariff_type === "GDMTH") {
+                                                rateCosts.base = rateCosts.base.toFixed(2);
+                                                rateCosts.middle = rateCosts.middle.toFixed(2);
+                                                rateCosts.peak = rateCosts.peak.toFixed(2);    
+                                            }
                                             read.rateCosts = rateCosts;
                                             dailyValues.push(read);
                                         }

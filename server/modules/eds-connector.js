@@ -261,7 +261,7 @@ var dateFilterSetup = function dateFilterSetup(filter, dates = {}){
     }
 }
 
-const getCFERateType = function(ISOdate) {
+const getCFEGDMTHRateType = function(ISOdate) {
     let date = moment(ISOdate).tz(timezone);
 
     // get CFE period
@@ -283,19 +283,29 @@ const getCFERateType = function(ISOdate) {
     return Constants.CFE.datePeriods[curr_period].rates[curr_day][date.hour()];
 }
 
-const getCFERate = function(ISOdate, city) {
+const getCFERate = function(ISOdate, city, tariff_type) {
     let AdminValue = app.loopback.getModel('AdminValue');
     let date = moment(ISOdate).tz(timezone);
     let new_date = date.clone().startOf('month').format();
     // console.log('Trying to call city ', city);
-
-    const rate_type = getCFERateType(ISOdate);
+    
+    let rate_type;
+    let rate;
     return new Promise((resolve, reject) => {
         AdminValue.findByDate(new_date, city, (err, res) => {
             if (err) reject(err);
             else {
+                if(tariff_type === "GDMTO") {
+                    rate_type = "ordinary";
+                } else if (tariff_type === "GDMTH"){
+                    rate_type = getCFEGDMTHRateType(ISOdate);
+                } else {
+                    return reject("Error, on adminValue.findByDate while getting the rate_type");
+                }
+                rate = res[`${tariff_type}`][`${rate_type}Price`];
+            
                 resolve({
-                    rate: res[`${rate_type}Price`],
+                    rate,
                     rate_type,
                     date
                 });
@@ -315,4 +325,4 @@ module.exports.readDemand = readDemand;
 module.exports.readEPimpHistory = readEPimpHistory;
 module.exports.dateFilterSetup = dateFilterSetup;
 module.exports.getCFERate = getCFERate;
-module.exports.getCFERateType = getCFERateType;
+module.exports.getCFEGDMTHRateType = getCFEGDMTHRateType;
