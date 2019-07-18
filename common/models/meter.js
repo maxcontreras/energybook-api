@@ -736,7 +736,7 @@ module.exports = function(Meter) {
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
                                     
-                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city, meter.company().tariff_type);
                                     let rate = CFE_rates.rate;
                                     const rate_type = CFE_rates.rate_type;
                                     let date = CFE_rates.date;
@@ -881,8 +881,8 @@ module.exports = function(Meter) {
                                     const minute = item.dateTime._text.slice(10,12);
                                     const second = item.dateTime._text.slice(12,14);
                                     const tmp_date = year+"-"+month+"-"+day+"T"+hour+":"+minute+":"+second+"Z";
-                                    
-                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city);
+
+                                    const CFE_rates = await EDS.getCFERate(tmp_date, meter.company().city, meter.company().tariff_type);
                                     let rate = CFE_rates.rate;
                                     const rate_type = CFE_rates.rate_type;
                                     let date = CFE_rates.date;
