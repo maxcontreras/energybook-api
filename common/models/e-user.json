@@ -42,6 +42,11 @@
       "required": true,
       "default": 2
     },
+    "settings": {
+      "type": "object",
+      "required": true,
+      "default": {}
+    },
     "created_at": {
       "type": "date",
       "required": true
