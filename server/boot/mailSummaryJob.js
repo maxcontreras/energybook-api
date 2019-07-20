@@ -15,6 +15,7 @@ const Constants = require('../../server/constants.json');
 const timezone = 'America/Mexico_City';
 
 const mailSummary = (filter) => {
+  console.log("starting mailSummary job")
   //generación, autoconsumo e inyeccion a la red y sus respectivos costos
   eUsers.find({
     include: [
@@ -49,10 +50,6 @@ const mailSummary = (filter) => {
         if (!res) {
           return;
         }
-        if (user.email !== 'oscarsierra02@gmail.com') {
-          return;
-        }
-
         let services = {};
         res.services().forEach((service) => {
           services[service.serviceName] = {
@@ -125,6 +122,9 @@ const mailSummary = (filter) => {
             })
           }),
           new Promise((resolve, reject) => {
+            if (!res.services()) {
+              return resolve();
+            }
             //services generation
             async.each(res.services(), (service, cb) => {
               meter.generationReadings(res.meter().id, null, service.serviceName, filter, 0, 3, null,
@@ -171,16 +171,19 @@ const mailSummary = (filter) => {
             })
           }),
           new Promise((resolve, reject) => {
+            if (!res.devices) {
+              return resolve()
+            }
             //devices generation
             async.each(res.devices, (device, cb) => {
-              
+
               meter.generationReadings(res.meter().id, device.name, null, filter, 0, 3, null,
               (err, res) => {
                 if(err) return cb(err);
                   
                 let energy = 0;
                 let cost = 0;
-                
+
                 res.generation.forEach((hourlyInfo) => {
                   energy += hourlyInfo.value;
                   cost += hourlyInfo.cost;          
@@ -248,5 +251,8 @@ const mailSummary = (filter) => {
   })
 }
 
-new CronJob('0 50 23 * * 6', mailSummary(Constants.Meters.filters.week), null, true, timezone);
-new CronJob('0 50 23 * */1 *', mailSummary(Constants.Meters.filters.month), null, true, timezone);
+if (process.env.ENVIRONMENT === 'production') {
+  //new CronJob('*/20 * * * * *', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
+  new CronJob('0 50 23 * * 6', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
+  new CronJob('0 50 23 * */1 *', () => {mailSummary(Constants.Meters.filters.month)}, null, true, timezone);
+}
