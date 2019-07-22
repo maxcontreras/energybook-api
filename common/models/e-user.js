@@ -31,6 +31,36 @@ module.exports = function(Euser) {
         http: {path: '/trialDaysLeft', verb: 'get'}
     })
 
+    Euser.updateMaximums = function updateMaximums(id, maximums, cb) {
+        Euser.findOne({
+            where: {
+                and: [
+                    {"id": id}
+                ]
+            }
+        }, (err, user) => {
+            if (err) return cb({status: 400, message: err})
+            if (!user) return cb({status: 400, message: 'User not found on PUT request api/eUsers/updateMaximums'})
+
+            user.settings = maximums;
+            user.save((err, newInstance) => {
+                if (err) return cb(err, null);
+                return cb(null, {status: 200, newInstance: newInstance, message: 'Settings updated successfully'});
+            });
+        })
+    }
+
+    Euser.remoteMethod(
+        'updateMaximums', {
+            accepts: [
+                { arg: 'id', type: 'string' },
+                { arg: 'maximums', type: 'object'}
+            ],
+            returns: { arg: 'response', type: 'object'},
+            http: {path: '/updateMaximums', verb: 'PUT'}
+        }
+    )
+
     Euser.beforeRemote('login', function(ctx, modelInstance, next) {
         if (!ctx.req.body.email || !ctx.req.body.password)
             return next({statusCode: 404, message: 'Datos insuficientes para iniciar sesión.'});
