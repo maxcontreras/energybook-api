@@ -81,11 +81,10 @@ module.exports = function(Euser) {
             let meter = company.meters()[0];
             let services = meter.services();
             let devices = meter.devices;
-            console.log(devices);
+            
             if (service) {
                 let serviceExists = false;
                 for (let element of services) {
-                    console.log(element);
                     if(element.serviceName === service) {
                         serviceExists = true;
                         break;
