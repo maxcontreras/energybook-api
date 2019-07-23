@@ -31,19 +31,91 @@ module.exports = function(Euser) {
         http: {path: '/trialDaysLeft', verb: 'get'}
     })
 
-    Euser.updateMaximums = function updateMaximums(id, maximums, cb) {
+    Euser.updateMaximums = function updateMaximums(id, maximums, service, device, cb) {
+        let message = '';
+        let badRequest = false;
+        if (!service && !device) {
+            message += "Error: There's not a service/device selected to update their maximums. ";
+            badRequest = true;
+        }
+        if (service && device) {
+            message += "Error: Can update only one service/device at a time, choose one. ";
+            badRequest = true;
+        }
+        if (!maximums) {
+            message += "Error: maximums key-value pair is null. ";
+            badRequest = true;
+        }
+        if (badRequest) {
+            return cb({status: 400, message});
+        }
+        
         Euser.findOne({
             where: {
                 and: [
                     {"id": id}
                 ]
-            }
+            },
+            include: [
+                {
+                    relation: "company",
+                    scope: {
+                        include: [
+                            {
+                                relation: "meters",
+                                scope: {
+                                    include: {
+                                        relation: "services"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
         }, (err, user) => {
             if (err) return cb({status: 400, message: err})
             if (!user) return cb({status: 400, message: 'User not found on PUT request api/eUsers/updateMaximums'})
+            
+            let company = user.company();
+            let meter = company.meters()[0];
+            let services = meter.services();
+            let devices = meter.devices;
+            console.log(devices);
+            if (service) {
+                let serviceExists = false;
+                for (let element of services) {
+                    console.log(element);
+                    if(element.serviceName === service) {
+                        serviceExists = true;
+                        break;
+                    }
+                }
+                if (serviceExists) {
+                    user.settings[service] = maximums;
+                } else {
+                    badRequest = true;
+                }
+            } else {
+                let deviceExists = false;
+                for (let element of devices) {
+                    if(element.name === device) {
+                        deviceExists = true;
+                        break;
+                    }
+                }
+                if (deviceExists) {
+                    user.settings[device] = maximums;
+                } else {
+                    badRequest = true;
+                }
+            }
 
-            user.settings = maximums;
-            user.save((err, newInstance) => {
+            if (badRequest) {
+                return cb({status: 400, message: "the service or device provided does not exists in the user's company"});
+            }
+            
+            user.updateAttributes({"settings": user.settings}, (err, newInstance) => {
                 if (err) return cb(err, null);
                 return cb(null, {status: 200, newInstance: newInstance, message: 'Settings updated successfully'});
             });
@@ -54,7 +126,9 @@ module.exports = function(Euser) {
         'updateMaximums', {
             accepts: [
                 { arg: 'id', type: 'string' },
-                { arg: 'maximums', type: 'object'}
+                { arg: 'maximums', type: 'object'},
+                { arg: 'service', type: 'string' },
+                { arg: 'device', type: 'string'}
             ],
             returns: { arg: 'response', type: 'object'},
             http: {path: '/updateMaximums', verb: 'PUT'}
