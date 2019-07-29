@@ -253,10 +253,10 @@ const mailSummary = (filter) => {
   })
 }
 
-if (process.env.ENVIRONMENT === 'production') {
+if (process.env.NODE_ENV === 'production') {
   new CronJob('0 50 23 * * 6', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
   new CronJob('0 50 23 * */1 *', () => {mailSummary(Constants.Meters.filters.month)}, null, true, timezone);
 }
-if (process.env.ENVIRONMENT === 'development') {
+if (process.env.NODE_ENV === 'development') {
   //new CronJob('*/20 * * * * *', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
 }
