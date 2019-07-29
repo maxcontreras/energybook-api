@@ -226,7 +226,8 @@ const mailSummary = (filter) => {
         })
 
         if(errorWhileGatheringData) {
-          console.log("error while preparing the weekly summary email to " + user.email + ": " + errorWhileGatheringData);
+          console.log("error while preparing the weekly summary email to " + user.email + ": ");
+          console.log(errorWhileGatheringData);
           return;
         }
 
@@ -241,6 +242,7 @@ const mailSummary = (filter) => {
         }
         const templateVars = {
           user,
+          company: user.company(),
           services: arrServices.sort((a, b) => { return a.name < b.name ? -1 : 1 }),
           devices: arrDevices.sort((a, b) => { return a.name < b.name ? -1 : 1 })
         };
@@ -252,7 +254,9 @@ const mailSummary = (filter) => {
 }
 
 if (process.env.ENVIRONMENT === 'production') {
-  //new CronJob('*/20 * * * * *', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
   new CronJob('0 50 23 * * 6', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
   new CronJob('0 50 23 * */1 *', () => {mailSummary(Constants.Meters.filters.month)}, null, true, timezone);
+}
+if (process.env.ENVIRONMENT === 'development') {
+  //new CronJob('*/20 * * * * *', () => {mailSummary(Constants.Meters.filters.week)}, null, true, timezone);
 }
