@@ -75,5 +75,13 @@
   "InformationFile": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "container": {
+    "dataSource": "storage",
+    "public": false
+  },
+  "edsRecords": {  
+    "dataSource": "mongodb",
+    "public": true
   }
 }
