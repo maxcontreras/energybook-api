@@ -57,14 +57,20 @@
       "type": "belongsTo",
       "model": "Company",
       "foreignKey": "company_id"
+    },
+    "notificaciones": {
+      "type": "hasMany",
+      "model": "notificaciones",
+      "foreignKey": "UserId"
     }
+
   },
   "acls": [
     {
       "accessType": "*",
       "principalType": "ROLE",
       "principalId": "$unauthenticated",
-      "permission": "DENY"
+      "permission": "ALLOW"
     },
     {
       "accessType": "*",

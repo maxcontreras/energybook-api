@@ -83,5 +83,9 @@
   "edsRecords": {  
     "dataSource": "mongodb",
     "public": true
+  },
+  "notificaciones": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }
