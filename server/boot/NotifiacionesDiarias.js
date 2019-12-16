@@ -20,7 +20,7 @@ var lista_costosDeDevices = [];
 var listafinal = [];
 var CompaniesID = [];
 
-let Mandando_a_Llamar = cron.schedule(' 0 9 * * *',
+let Mandando_a_Llamar = cron.schedule('0 9 * * * *',
 // Segun GuruCrontab  => At 09:00 Everyday
 () => {
     p = -1;

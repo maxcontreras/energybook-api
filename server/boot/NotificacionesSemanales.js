@@ -67,6 +67,9 @@ function IniciarNotificaciones(y) {
                     CompaniesID.push(Info[p].company_id)
                     console.log(CompaniesID)
 
+
+
+
                     Infos
                         .devices
                         .forEach(Devices => {
