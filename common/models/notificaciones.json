@@ -10,7 +10,7 @@
     "Dispositivos": {
       "type": "object"
     },
-    "Servicios":{
+    "Servicios": {
       "type": "object"
     },
     "company_id": {
@@ -97,7 +97,7 @@
           "required": true,
           "description": "Company id "
         }
-      ],
+      ],  
       "returns": [
         {
           "arg": "Resultado",
@@ -113,6 +113,39 @@
           "verb": "post"
         }
       ]
+    
+    },
+    "CountNotificaciones": {
+      "accepts": [
+        {
+          "arg": "User_id",
+          "type": "string",
+          "required": true,
+          "description": "El id del usuario"
+        },
+        {
+          "arg": "Company_id",
+          "type": "string",
+          "required": true,
+          "description": "Company id "
+        }
+      ],
+      "returns": [
+        {
+          "arg": "Resultado",
+          "type": "object",
+          "root": false,
+          "description": ""
+        }
+      ],
+      "description": "Ve las notificaciones y regresa arreglo de nuevas notificaciones y pasadas",
+      "http": [
+        {
+          "path": "/CountNotificaciones",
+          "verb": "post"
+        }
+      ]
+    
     }
   }
 }
