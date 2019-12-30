@@ -36,13 +36,13 @@ transporter.use('compile', hbs({
 }));
 
 let x = cron.schedule(
-    '20 9 * * 1 ',
+    '30 5 1 * * ',
     () => { // Segun gurutab “At 09:20 on Monday.” 20 minutos despues de cuando se crearon las notificaciones para no causar errores
         // Para fines de prueba propongo  * * * * * '20 9 * * 1'
 
         notificaciones.find({
             where: {
-                tipo: 'Semanal', // buscan los notificaciones Semanal
+                tipo: 'Mensual', // buscan los notificaciones Semanal
                 En_Correo: false
             }
         }, function (err, notificaciones) {
@@ -111,7 +111,7 @@ let x = cron.schedule(
 
                             transporter.sendMail(mailOptions, (err, inf) => {
                                 if (err) {
-                                  
+                                   
                                 } else {
                                  console.log('se mando correo')
                                 }
@@ -131,17 +131,5 @@ fila=[]
             });
 
         });
-
-     /*   notificaciones.updateAll({
-            tipo: 'Semanal', // buscan los notificaciones Semanal
-            En_Correo: false
-
-        }, {
-            En_Correo: true
-        }, function () {
-            console.log('se actualizaron los registros en notificaciones')
-        })
-
-        */
   }
 );
