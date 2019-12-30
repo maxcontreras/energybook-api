@@ -582,7 +582,7 @@ module.exports = function(Meter) {
                                         }
                                         // If interval is daily, replace values with dailyValues
                                         cb(null, dailyValues);
-                                    } else {
+                                    } else {                                 
                                         cb(null, values);
                                     }
                                 });

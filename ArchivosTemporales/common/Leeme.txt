@@ -1,0 +1,3 @@
+Esta carpeta debe de estar creada si no, no funcionara la subida de archivos Csv, 
+git solo me deja subir la carpeta si tiene algun archivo adentro por eso veran este archivo...
+Segun yo despues se puede eliminar.

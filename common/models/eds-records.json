@@ -1,0 +1,26 @@
+{
+  "name": "edsRecords",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "Fecha": {
+      "type": "string",
+      "required": true
+    },
+    "DP": {
+      "type": "number",
+      "required": true
+    },
+    "EP": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

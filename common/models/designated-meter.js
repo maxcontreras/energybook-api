@@ -34,6 +34,14 @@ const OPTIONS_JS2XML = {
 moment.tz.setDefault("America/Mexico_City");
 const timezone = 'America/Mexico_City';
 
+
+var CONTAINERS_URL = '/api/containers/';
+var fs = require('fs');
+var csv = require('fast-csv');
+var axios = require('axios');
+
+
+
 module.exports = function(Designatedmeter) {
 
     Designatedmeter.consumptionSummary = function consumptionSummary(company_id, cb) {
@@ -1185,4 +1193,58 @@ module.exports = function(Designatedmeter) {
             returns: { arg: 'result', type: 'string' }
         }
     );
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Designatedmeter.upload = function (ctx,options,cb) {
+        if(!options) options = {};
+        ctx.req.params.container = 'common';
+        Designatedmeter.app.models.container.upload(ctx.req,ctx.result,options,function (err,fileObj) {
+            if(err) {
+                cb(err);
+            } else {
+                var fileInfo = fileObj.files.file[0];//Saca las propiedades del archivo
+                console.log(fileInfo.name)//Nombre de nuestro archivo
+
+                  
+                        fs.createReadStream('../energybook-api/ArchivosTemporales/common/'+fileInfo.name) //Ruta dinamica a ArchivosTemporales/common/
+                       .pipe(csv.parse())
+                       .on('data', row =>  
+                      axios.post('http://localhost:3000/api/edsRecords',{
+                          "Fecha":row[0].split(';')[0],
+                        "DP": row[0].split(';')[1],
+                        "EP": row[0].split(';')[2]
+                       }))
+                       
+                       ,
+                       fs.unlink('../energybook-api/ArchivosTemporales/common/'+fileInfo.name, (err) => { // Lo que hace esto elimina el archivo temporal
+                        if (err) throw err;
+                        console.log('Se elimino el archivo temporal ');
+                      });
+                         console.log('Se realizo con exito la operacion');
+                        cb(null, 'Exito');
+                    }
+                });
+            }
+       
+
+
+    Designatedmeter.remoteMethod(
+        'upload',
+        {
+            description: 'Uploads a file',
+            accepts: [
+                { arg: 'ctx', type: 'object', http: { source:'context' } },
+                { arg: 'options', type: 'object', http:{ source: 'query'} }
+            ],
+            returns: {
+                arg: 'fileObject', type: 'object', root: true
+            },
+            http: {verb: 'post'}
+        }
+    );
+
+
+
+
+
 };
