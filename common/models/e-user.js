@@ -100,4 +100,25 @@ module.exports = function(Euser) {
             returns: { arg: 'result', type: 'string' }
         }
     );
+
+    Euser.resetPasswordEdited = function resetPassword(userId, password, cb) {
+        Euser.findById(userId, (err, user) => {
+            if (err) return cb(err);
+            if (!user) return cb({ status: 400, message: 'No user found' });
+            user.updateAttribute('password',password, (err, user) => {
+                if (err) return cb(err);
+                cb(null, 'OK');
+            });
+        });
+    }
+
+    Euser.remoteMethod(
+        'resetPasswordEdited', {
+            accepts: [
+                { arg: 'userId', type: 'string' },
+                { arg: 'password', type: 'string' }
+            ],
+            returns: { arg: 'result', type: 'string' }
+        }
+    );
 };
