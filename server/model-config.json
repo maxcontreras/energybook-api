@@ -87,5 +87,9 @@
   "notificaciones": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "eficiencia": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }

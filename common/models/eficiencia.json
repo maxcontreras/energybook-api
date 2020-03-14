@@ -1,0 +1,26 @@
+{
+  "name": "eficiencia",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "UserId": {
+      "type": "string",
+      "required": true
+    },
+    "Dia": {
+      "type": "string",
+      "required": true
+    },
+    "valor": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

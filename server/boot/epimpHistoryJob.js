@@ -4,7 +4,7 @@ const DesignatedMeter = app.loopback.getModel('DesignatedMeter');
 
 var timezone = 'America/Mexico_City';
 
-var epimpHistory = new CronJob('50 * * * *', function () {
+var epimpHistory = new CronJob('*/30 * * * *', function () {
     // console.log('Starting epimp history job')
     DesignatedMeter.epimpHistory(undefined, (err, res) => {
         // console.log('Finished epimpHistory job')

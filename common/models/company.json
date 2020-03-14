@@ -65,7 +65,7 @@
     "administrando": {
       "type": "boolean"
     },
-    "Administrando":{
+    "Administrando": {
       "type": "array"
     }
   },
