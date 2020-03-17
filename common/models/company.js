@@ -206,6 +206,59 @@ module.exports = function(Company) {
         }
     );
 
+
+    Company.addAdmins = function addAdmins(data, cb) {
+        if(!data.company.id){
+            cb({status: 400, message: "ID de compañía faltante"}, null);
+        } else {
+            Company.findById(data.company.id, function(err, company){
+                if(!company || company.status === Constants.Companies.status.Bloqueada){
+                    cb({status: 400, message: "Error, compañía bloqueada"}, null);
+                } else {
+                    company.users.create({
+                        role_id: 1,
+                        Administrando: true,
+                        name: data.manager.name,
+                        lastname: data.manager.lastname,
+                        phone: data.company.phone,
+                        email: data.manager.email,
+                        password: 'Password123',
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    }, function(err, user){
+                        if(err) cb(err, null)
+
+                    });
+                    if(data.user){
+                        company.users.create({
+                            role_id: 1,
+                            Administrando: true,
+                            name: data.user.name,
+                            lastname: data.user.lastname,
+                            phone: data.company.phone,
+                            email: data.user.email,
+                            password: 'Password123',
+                            created_at: new Date(),
+                            updated_at: new Date()
+                        }, function(err, user){
+                            if(err) cb(err, null)
+                        });
+                    }
+                    cb(null, true);
+                }
+            });
+        }
+    };
+
+    Company.remoteMethod(
+        'addAdmins', {
+            accepts: [
+                { arg: 'data', type: 'object' }
+            ],
+            returns: { arg: 'response', type: 'string', root: true }
+        }
+    );
+
     Company.updateData = function updateData(data, cb) {
         let new_company = data.company;
         if(!new_company.id){

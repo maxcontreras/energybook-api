@@ -36,6 +36,89 @@ function Iniciando_secuencia() {
         designatedMeter.find({}, function (err, servuce) {
 
             if (p == servuce.length) {
+                axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["Agrofesam"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - Agrofesam"}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+
+
+                  axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["Agroindustria Gara"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - Agroindustria Gara"}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+                  
+                  axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["Deliseos"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - Deliseos "}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+
+                  axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["Pureplastic"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - Pureplastic "}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+
+                  
+                  
+                  axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["Samfrut"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - Samfrut "}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+
+                  axios.post('https://onesignal.com/api/v1/notifications',{
+                    "app_id": "e31f477a-2f06-4f77-b051-376694227a4c",
+                    "included_segments": ["TecnoFruit"],
+                    "data": {"foo": "bar"},
+                    "template_id": "8db1414c-8b29-44a3-89b2-1c36f991a14d",
+                    "contents": {"en": "Listo!Ingresa a la app para saber cual fue el consumo y generacion de energia que tuviste el dia de ayer "},
+                    "headings": {"en" : "Costos diarios - TecnoFruit "}
+                  },
+                  {headers: {
+                      'Authorization': 'Basic M2M1NTE5YTQtYzNmYS00NDk0LTk2YjUtYTcyY2EyMTg5ZWVj',
+                      'Content-Type': 'application/json; charset=utf-8'
+                  }} );
+                  
+
+                  
                 console.log('se terminaron de hacer las notificaciones')
                 ok.stop()
             } else {

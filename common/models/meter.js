@@ -450,7 +450,6 @@ module.exports = function(Meter) {
                     let xhr = new XMLHttpRequest();
 
                     var dates = (filter === Constants.Meters.filters.custom)? EDS.dateFilterSetup(filter, custom_dates):EDS.dateFilterSetup(filter);
-                    
                     // Set period fixed to 1 hour
                     dates.period = 3600;
                     let serviceToCall = meter.hostname + API_PREFIX + "records.xml" + "?begin=" + dates.begin + "?end=" + dates.end;

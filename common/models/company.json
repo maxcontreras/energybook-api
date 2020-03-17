@@ -55,6 +55,18 @@
     },
     "address": {
       "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "administrador": {
+      "type": "string"
+    },
+    "administrando": {
+      "type": "boolean"
+    },
+    "Administrando": {
+      "type": "array"
     }
   },
   "validations": [],

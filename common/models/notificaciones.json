@@ -97,7 +97,7 @@
           "required": true,
           "description": "Company id "
         }
-      ],  
+      ],
       "returns": [
         {
           "arg": "Resultado",
@@ -113,7 +113,6 @@
           "verb": "post"
         }
       ]
-    
     },
     "CountNotificaciones": {
       "accepts": [
@@ -145,7 +144,6 @@
           "verb": "post"
         }
       ]
-    
     }
   }
 }
