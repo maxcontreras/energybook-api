@@ -22,5 +22,37 @@
   "validations": [],
   "relations": {},
   "acls": [],
-  "methods": {}
+  "methods": {
+    "ProduccionMes": {
+      "accepts": [
+        {
+          "arg": "UserId",
+          "type": "string",
+          "required": true,
+          "description": "Id del usuario"
+        },
+        {
+          "arg": "MesyAno",
+          "type": "string",
+          "required": true,
+          "description": "El Mes y año en el que se va a buscar "
+        }
+      ],
+      "returns": [
+        {
+          "arg": "Resultado",
+          "type": "array",
+          "root": false,
+          "description": ""
+        }
+      ],
+      "description": "Saca la produccion del mes por usuario y numero de mes y año ",
+      "http": [
+        {
+          "path": "/ProduccionUsuarioMensual",
+          "verb": "post"
+        }
+      ]
+    }
+  }
 }
