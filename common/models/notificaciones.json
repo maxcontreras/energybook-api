@@ -27,6 +27,9 @@
     },
     "usuarios": {
       "type": "object"
+    },
+    "Descripcion": {
+      "type": "string"
     }
   },
   "validations": [],

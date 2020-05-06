@@ -12,14 +12,16 @@
       "required": true
     },
     "city": {
-      "type": "string",
-      "required": true
+      "type": "string"
     },
     "GDMTO": {
       "type": "object"
     },
     "GDMTH": {
       "type": "object"
+    },
+    "Division": {
+      "type": "string"
     }
   },
   "validations": [],

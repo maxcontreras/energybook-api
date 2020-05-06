@@ -67,6 +67,9 @@
     },
     "Administrando": {
       "type": "array"
+    },
+    "Division": {
+      "type": "string"
     }
   },
   "validations": [],
