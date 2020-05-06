@@ -1,4 +1,4 @@
- 
+/*
 
 
  const app = require('../server');
@@ -131,7 +131,7 @@
                      console.log(' Servicios EPimp')
                      console.log(ServiciosresultadoEPimp)
                      
-                     /*----------------------------------------------------*/
+                     /*----------------------------------------------------
 
 
                      console.log('Devices Epimp')
@@ -191,3 +191,4 @@ console.log('se crea un apartado')
  
  }
 
+*/
