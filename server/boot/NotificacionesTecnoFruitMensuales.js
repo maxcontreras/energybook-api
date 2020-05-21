@@ -34,6 +34,12 @@ cron.schedule(
         },
       })
       .then((Info) => {
+
+        const T1  = Info.devices[1].description
+        const T2 = Info.devices[2].description
+        const T3 = Info.devices[3].description   
+
+
         Meter.getConsumptionCostsByFilter(
           "5bf6ef89db55ec4a265b3179", // id del meter
           "T1", //Por cada dispositivo
@@ -59,7 +65,7 @@ cron.schedule(
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
 
-              lista_costosDeDevices.push("T1" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_costosDeDevices.push(T1 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
         
             } else if (err) {
               console.log(err);
@@ -94,7 +100,7 @@ cron.schedule(
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
 
-                lista_costosDeDevices.push("T2" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T2 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
            
               } else if (err) {
                 console.log(err);
@@ -127,7 +133,7 @@ cron.schedule(
                   currency: "USD",
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-                lista_costosDeDevices.push("T3" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T3 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
             
               } else if (err) {
@@ -232,7 +238,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push("T1" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_DemandaDispositivos.push(T1 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
             
             }
@@ -264,7 +270,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push("T2" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_DemandaDispositivos.push(T2 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
              
             }
@@ -296,7 +302,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push("T3" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_DemandaDispositivos.push(T3 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
             
             }
@@ -395,7 +401,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_EpimpDispositivos.push("T1" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_EpimpDispositivos.push(T1 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
           
             }
@@ -427,7 +433,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_EpimpDispositivos.push("T2" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_EpimpDispositivos.push(T2 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
            
             }
@@ -459,7 +465,7 @@ cron.schedule(
                 currency: "USD",
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_EpimpDispositivos.push("T3" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_EpimpDispositivos.push(T3 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
              
             }
