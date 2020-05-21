@@ -22,6 +22,7 @@ cron.schedule(
   "0 9 * * *",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
+   
     designatedMeter
       .findOne({
         where: {
@@ -33,6 +34,16 @@ cron.schedule(
         },
       })
       .then((Info) => {
+const T1  = Info.devices[1].description
+const T2 = Info.devices[2].description
+const T3 =Info.devices[3].description
+const T4 =Info.devices[4].description
+const T5 = Info.devices[5].description
+     
+
+
+
+
         Meter.getConsumptionCostsByFilter(
           "5bb8fe581b25d76067e2d4f9", // id del meter
           "T1", //Por cada dispositivo
@@ -58,7 +69,7 @@ cron.schedule(
               });
               var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
 
-              lista_costosDeDevices.push("T1" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              lista_costosDeDevices.push(T1 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
         
             } else if (err) {
               console.log(err);
@@ -93,7 +104,7 @@ cron.schedule(
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
 
-                lista_costosDeDevices.push("T2" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T2 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
       
               } else if (err) {
                 console.log(err);
@@ -126,7 +137,7 @@ cron.schedule(
                   currency: "USD",
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-                lista_costosDeDevices.push("T3" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T3 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
        
               } else if (err) {
@@ -160,7 +171,7 @@ cron.schedule(
                   currency: "USD",
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-                lista_costosDeDevices.push("T4" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T4 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
            
               } else if (err) {
@@ -194,7 +205,7 @@ cron.schedule(
                   currency: "USD",
                 });
                 var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-                lista_costosDeDevices.push("T5" + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+                lista_costosDeDevices.push(T5 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
 
             
               } else if (err) {
@@ -303,7 +314,7 @@ cron.schedule(
               Costo_Dispositivo = Costo_Dispositivo.toLocaleString("en-US");
 
               lista_DemandaDispositivos.push(
-                "T1" + " " + Costo_Dispositivo + " kW"
+                T1 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
             
@@ -333,7 +344,7 @@ cron.schedule(
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
               lista_DemandaDispositivos.push(
-                "T2" + " " + Costo_Dispositivo + " kW"
+                T2 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
      
@@ -364,7 +375,7 @@ cron.schedule(
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
 
               lista_DemandaDispositivos.push(
-                "T3" + " " + Costo_Dispositivo + " kW"
+                T3 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
           
@@ -395,7 +406,7 @@ cron.schedule(
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
 
               lista_DemandaDispositivos.push(
-                "T4" + " " + Costo_Dispositivo + " kW"
+                T4 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
              
@@ -426,7 +437,7 @@ cron.schedule(
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
 
               lista_DemandaDispositivos.push(
-                "T5" + " " + Costo_Dispositivo + " kW"
+                T5 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
            
@@ -520,7 +531,7 @@ cron.schedule(
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //Mostrarlo de manera bonita
 
               lista_EpimpDispositivos.push(
-                "T1" + " " + Costo_Dispositivo + " kWh"
+                T1 + " " + Costo_Dispositivo + " kWh"
               ); //Añadiendolos a un array para futuro uso
 
         
@@ -550,7 +561,7 @@ cron.schedule(
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //Mostrarlo de manera bonita
               lista_EpimpDispositivos.push(
-                "T2" + " " + Costo_Dispositivo + " kWh"
+                T2 + " " + Costo_Dispositivo + " kWh"
               ); //Añadiendolos a un array para futuro uso
 
           
@@ -580,7 +591,7 @@ cron.schedule(
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
               lista_EpimpDispositivos.push(
-                "T3" + " " + Costo_Dispositivo + " kWh"
+                T3 + " " + Costo_Dispositivo + " kWh"
               ); //Añadiendolos a un array para futuro uso
 
              
@@ -610,7 +621,7 @@ cron.schedule(
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
               lista_EpimpDispositivos.push(
-                "T4" + " " + Costo_Dispositivo + " kWh"
+                T4 + " " + Costo_Dispositivo + " kWh"
               ); //Añadiendolos a un array para futuro uso
 
              
@@ -640,7 +651,7 @@ cron.schedule(
                 .toFixed(2)
                 .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
               lista_EpimpDispositivos.push(
-                "T5" + " " + Costo_Dispositivo + " kWh"
+                T5 + " " + Costo_Dispositivo + " kWh"
               ); //Añadiendolos a un array para futuro uso
 
            
@@ -748,5 +759,11 @@ cron.schedule(
           MostrarServicio1Valor = [];
         }, 100000);
       });
-  }
+
+    
+
+     
+}
+
+
 );
