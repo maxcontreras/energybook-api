@@ -9,6 +9,10 @@ const Meter = app.models.Meter;
 var lista_costosDeDevices = [];
 var lista_CostoDeServicios = [];
 
+const moment = require("moment-timezone");
+moment.locale('es')
+moment.tz.setDefault("America/Mexico_City");
+
 var lista_DemandaDispositivos = [];
 var lista_DemandaDeServicios = [];
 
@@ -18,13 +22,13 @@ var MostrarServicio1Valor = [];
 var MostrarServicio2Valor = [];
 
 var cron = require("node-cron");
-/*cron.schedule(
+cron.schedule(
   // 5 45 AM LUNES A VIERNES
   "10 9 * * *",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
 
-    */
+   
     designatedMeter
       .findOne({
         where: {
@@ -188,7 +192,7 @@ var cron = require("node-cron");
         ///////////////////////////////////
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -238,14 +242,10 @@ var cron = require("node-cron");
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
-
-              Costo_Dispositivo = Costo_Dispositivo.toLocaleString("en-US");
+              var  Maximo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
-                T1 + " " + Costo_Dispositivo + " kW"
+                T1 + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
               console.log(lista_DemandaDispositivos);
@@ -271,11 +271,9 @@ var cron = require("node-cron");
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Maximo =  Math.max(...DemandaTotal)
               lista_DemandaDispositivos.push(
-                T2 + " " + Costo_Dispositivo + " kW"
+                T2 + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
          
@@ -301,12 +299,10 @@ var cron = require("node-cron");
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Maximo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
-                T3 + " " + Costo_Dispositivo + " kW"
+                T3 + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
            
@@ -332,11 +328,9 @@ var cron = require("node-cron");
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
+              var  Maximo =  Math.max(...DemandaTotal)
               lista_DemandaDeServicios.push(
-                "Servicio 1" + " " + Costo_Dispositivo + " kW"
+                "Servicio 1" + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
              
@@ -345,7 +339,7 @@ var cron = require("node-cron");
         }, 40000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -500,7 +494,7 @@ var cron = require("node-cron");
         }, 65000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -512,7 +506,7 @@ var cron = require("node-cron");
                   Dispositivos: lista_EpimpDispositivos,
                   Servicios: lista_EpimpServicios,
                   company_id: Info.company_id,
-                  tipo: "EPIMP",
+                  tipo: "Consumo",
                   intervalo: "Diaria",
                   En_Correo: false,
                   Descripcion:
@@ -571,7 +565,7 @@ var cron = require("node-cron");
         }, 85000);
       });
 
-      /*
+      
   }
 );
-*/
+

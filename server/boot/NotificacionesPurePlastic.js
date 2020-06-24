@@ -17,6 +17,10 @@ var lista_EpimpServicios = [];
 var MostrarServicio1Valor = [];
 var MostrarServicio2Valor = [];
 
+const moment = require("moment-timezone");
+moment.locale('es')
+moment.tz.setDefault("America/Mexico_City");
+
 var cron = require("node-cron");
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
@@ -295,7 +299,7 @@ cron.schedule(
         ///////////////////////////////////
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -345,9 +349,7 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
 
               Costo_Dispositivo = Costo_Dispositivo.toLocaleString("en-US");
 
@@ -377,10 +379,7 @@ cron.schedule(
                 // por cada resultado meter el costo en un arreglo
                 DemandaTotal.push(res[x].value);
               }
-
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
               lista_DemandaDispositivos.push(
                 T2 + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
@@ -408,9 +407,7 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
                 T3 + " " + Costo_Dispositivo + " kW"
@@ -439,9 +436,7 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
                 T4 + " " + Costo_Dispositivo + " kW"
@@ -470,9 +465,7 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
                 T5 + " " + Costo_Dispositivo + " kW"
@@ -501,9 +494,7 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
               lista_DemandaDeServicios.push(
                 "Servicio 1" + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
@@ -530,10 +521,7 @@ cron.schedule(
                 // por cada resultado meter el costo en un arreglo
                 DemandaTotal.push(res[x].value);
               }
-
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
               lista_DemandaDeServicios.push(
                 "Servicio 2" + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
@@ -544,7 +532,7 @@ cron.schedule(
         }, 53000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -789,7 +777,7 @@ cron.schedule(
         }, 77000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -801,7 +789,7 @@ cron.schedule(
                   Dispositivos: lista_EpimpDispositivos,
                   Servicios: lista_EpimpServicios,
                   company_id: Info.company_id,
-                  tipo: "EPIMP",
+                  tipo: "Consumo",
                   Descripcion:
                     "Resumen del consumo de energia de tus dispositivos.",
                   intervalo: "Diaria",

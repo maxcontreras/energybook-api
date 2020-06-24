@@ -928,6 +928,7 @@ module.exports = function(Designatedmeter) {
                         if (err) {
                             nextService(err);
                         } else if (monthlyReadings) {
+                           // console.log(monthlyReadings)
                             const company_id = meter.company().id;
                             service.updateAttribute("monthlyReadings", monthlyReadings, (err, updated) => {
                                 if(err) return nextService();

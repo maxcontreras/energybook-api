@@ -16,6 +16,9 @@ var lista_EpimpDispositivos = [];
 var lista_EpimpServicios = [];
 var MostrarServicio1Valor = [];
 var MostrarServicio2Valor = [];
+const moment = require("moment-timezone");
+moment.locale('es')
+moment.tz.setDefault("America/Mexico_City");
 
 var cron = require("node-cron");
 
@@ -149,7 +152,7 @@ console.log(Info.devices)
         }, 10000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -196,15 +199,12 @@ console.log(Info.devices)
                 // por cada resultado meter el costo en un arreglo
                 DemandaTotal.push(res[x].value);
               }
+        
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
-
-              Costo_Dispositivo = Costo_Dispositivo.toLocaleString("en-US");
+              var  Maximo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
-                T1 + " " + Costo_Dispositivo + " kW"
+                T1 + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
         
@@ -232,14 +232,10 @@ console.log(Info.devices)
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
-
-              Costo_Dispositivo = Costo_Dispositivo.toLocaleString("en-US");
+              var  Maximo =  Math.max(...DemandaTotal)
 
               lista_DemandaDispositivos.push(
-                T2 + " " + Costo_Dispositivo + " kW"
+                T2 + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
              
@@ -265,11 +261,9 @@ console.log(Info.devices)
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2)
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ","); // Mostrarlo de manera bonita
+              var  Maximo =  Math.max(...DemandaTotal)
               lista_DemandaDeServicios.push(
-                "Servicio 1" + " " + Costo_Dispositivo + " kW"
+                "Servicio 1" + " " + Maximo + " kW"
               ); //Añadiendolos a un array para futuro uso
 
            
@@ -278,7 +272,7 @@ console.log(Info.devices)
         }, 30000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -401,7 +395,7 @@ console.log(Info.devices)
         }, 50000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -413,7 +407,7 @@ console.log(Info.devices)
                   Dispositivos: lista_EpimpDispositivos,
                   Servicios: lista_EpimpServicios,
                   company_id: Info.company_id,
-                  tipo: "EPIMP",
+                  tipo: "Consumo",
                   intervalo: "Diaria",
                   Descripcion:
                     "Resumen del consumo de energia de tus dispositivos.",

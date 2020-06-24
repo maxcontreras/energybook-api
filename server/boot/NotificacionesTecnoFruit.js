@@ -14,6 +14,10 @@ var lista_DemandaDeServicios = [];
 
 var lista_EpimpDispositivos = [];
 var lista_EpimpServicios = [];
+
+const moment = require("moment-timezone");
+moment.locale('es')
+moment.tz.setDefault("America/Mexico_City");
 var MostrarServicio1Valor = [];
 
 var cron = require("node-cron");
@@ -182,7 +186,7 @@ cron.schedule(
         }, 15000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -231,15 +235,10 @@ cron.schedule(
                 // por cada resultado meter el costo en un arreglo
                 DemandaTotal.push(res[x].value);
               }
-
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
-              var formatter = new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              });
-              var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push(T1 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
+              lista_DemandaDispositivos.push(
+                T1 + " " + Costo_Dispositivo + " kW"
+              ); //Añadiendolos a un array para futuro uso
 
             
             }
@@ -264,14 +263,10 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
-              var formatter = new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              });
-              var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push(T2 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
+              lista_DemandaDispositivos.push(
+                T2 + " " + Costo_Dispositivo + " kW"
+              ); //Añadiendolos a un array para futuro uso
 
            
             }
@@ -296,14 +291,10 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
-              var formatter = new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              });
-              var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
-              lista_DemandaDispositivos.push(T3 + " " + Costo_Dispositivo); //Añadiendolos a un array para futuro uso
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
+              lista_DemandaDispositivos.push(
+                T3 + " " + Costo_Dispositivo + " kW"
+              ); //Añadiendolos a un array para futuro uso
 
           
             }
@@ -328,16 +319,11 @@ cron.schedule(
                 DemandaTotal.push(res[x].value);
               }
 
-              var Costo_Dispositivo = DemandaTotal.reduce((a, b) => a + b, 0) //Sumando los valores
-                .toFixed(2); //redondearlo a dos punto  .replace(/\B(?=(\d{3})+(?!\d))/g, ",") Mostrarlo de manera bonita
-              var formatter = new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              });
-              var Costo_Dispositivo = formatter.format(Costo_Dispositivo);
+              var  Costo_Dispositivo =  Math.max(...DemandaTotal)
               lista_DemandaDeServicios.push(
-                "Servicio 1" + " " + Costo_Dispositivo
+                "Servicio 1" + " " + Costo_Dispositivo + " kW"
               ); //Añadiendolos a un array para futuro uso
+
 
             
             }
@@ -345,7 +331,7 @@ cron.schedule(
         }, 37000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,
@@ -508,7 +494,7 @@ cron.schedule(
         }, 60000);
 
         setTimeout(() => {
-          Fecha = Date.now();
+          var Fecha = moment().format('L') + " " + moment().format('LTS')
           User.find({
             where: {
               company_id: Info.company_id,

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Document</title>
+        <style>
+      
+
+
+            p{
+
+                    color: #000000;
+        text-align: center;
+                    }
+
+         
+            .alignleft {
+                float: left;
+        
+                color: #000000;
+            }
+            .alignright {
+                float: right;
+                color: #000000;
+            }
+             .aligncenter {
+                float: center;
+                color: #000000;
+            }
+            .rcorners1 {
+                border-radius: 25px;
+                background: #485658;
+                padding: 20px;
+                width: 600px;
+                height: 150px;
+            }
+            .Liga{
+                text-decoration: none;
+                color:#485658 ;
+            }
+            * {
+                margin: 0;
+                padding: 0;
+ 
+            }
+
+            body,
+            html {
+                height: 100%;
+                font-family: 'Courier New', Courier, monospace;
+                color: #333333;
+               
+            }
+
+            /* ------------------------------------ */
+            a {
+                margin: 0;
+                transition: all 0.4s;
+                -webkit-transition: all 0.4s;
+                -o-transition: all 0.4s;
+                -moz-transition: all 0.4s;
+            }
+
+            a:focus {
+                outline: none !important;
+            }
+
+            a:hover {
+                text-decoration: none;
+            }
+
+            /* ------------------------------------ */
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                margin: 0;
+            }
+
+            p {
+                margin: 0;
+            }
+
+            li  ,
+            li {
+                      text-align: center;
+                color: #000000;
+            }
+            ul {
+                      text-align: center;
+                color: #000000;
+                margin: 0;
+                list-style-type: none;
+            }
+
+            /* ------------------------------------ */
+            input {
+                display: block;
+                outline: none;
+                border: none !important;
+            }
+
+            textarea {
+                display: block;
+                outline: none;
+            }
+
+            input:focus,
+            textarea:focus {
+                border-color: transparent !important;
+            }
+
+            /* ------------------------------------ */
+            button {
+                outline: none !important;
+                border: none;
+                background: transparent;
+            }
+
+            button:hover {
+                cursor: pointer;
+            }
+
+            iframe {
+                border: none !important;
+            }
+            /*/
+            /////////////////////////////////////////////////////////////////
+            [Table]*/ .limiter {
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            .container-table100 {
+                width: 100%;
+                min-height: 100vh;
+                background: #ffffff;
+
+                display: -webkit-box;
+                display: -webkit-flex;
+                display: -moz-box;
+                display: -ms-flexbox;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-wrap: wrap;
+                padding: 33px 30px;
+            }
+
+            .wrap-table100 {
+                width: 1100px;
+            }
+            /*/
+            /////////////////////////////////////////////////////////////////
+            [Table]*/ table {
+                width: 100%;
+                background-color: #fff;
+            }
+
+            td,
+            th {
+                font-weight: unset;
+                padding-right: 10px;
+            }
+
+            .column100 {
+                width: 130px;
+                padding-left: 25px;
+            }
+
+            .column100.column1 {
+                width: 265px;
+                padding-left: 20px;
+            }
+
+            .row100.head th {
+                padding-top: 24px;
+                padding-bottom: 20px;
+                border-radius: 9px;
+                text-size:40px;
+            }
+            .row100 td {
+                padding-top: 18px;
+                padding-bottom: 14px;
+            }
+
+            /*==================================================================
+[ Ver1 ]*/
+            .table100.ver1 td {
+                font-family: Montserrat-Regular;
+                font-size: 14px;
+                color: #808080;
+                line-height: 1.4;
+            }
+
+            .table100.ver1 th {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 20px;
+                color: #fff;
+                line-height: 1.4;
+                text-transform: uppercase;
+
+                background-color: #485658;
+            }
+
+            .table100.ver1 .row100:hover {
+                background-color: #f2f2f2;
+            }
+
+            .table100.ver1 .hov-column-ver1 {
+                background-color: #f2f2f2;
+            }
+
+            .table100.ver1 .hov-column-head-ver1 {
+                background-color: #485658 !important;
+            }
+
+            .table100.ver1 .row100 td:hover {
+                background-color: #485658;
+                color: #EFEFEF;
+            }
+
+            /*==================================================================
+[ Ver2 ]*/
+            .table100.ver2 td {
+                font-family: Montserrat-Regular;
+                font-size: 14px;
+                color: #808080;
+                line-height: 1.4;
+            }
+
+            .table100.ver2 th {
+                font-family: Montserrat-Medium;
+                font-size: 12px;
+                color: #fff;
+                line-height: 1.4;
+                text-transform: uppercase;
+
+                background-color: #000000;
+            }
+
+            .table100.ver2 .row100:hover td {
+                background-color: #83d160;
+                color: #fff;
+            }
+
+            .table100.ver2 .hov-column-ver2 {
+                background-color: #83d160;
+                color: #fff;
+            }
+
+            .table100.ver2 .hov-column-head-ver2 {
+                background-color: #484848 !important;
+            }
+
+            .table100.ver2 .row100 td:hover {
+                background-color: #57b846;
+                color: #fff;
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <title>Table V03</title>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <!--===============================================================================================-->
+            </head>
+            <body></div>
+
+            <div class="limiter">
+                <div class="container-table100">
+                    <div class="wrap-table100">
+                        <div class="table100 ver1 m-b-110">
+                            <div>
+                                <p class="alignleft">    <img src="cid:unique"  width="200" alt="300">
+                                    <br>
+
+                                </p>
+                                <p class="alignright">
+                                     <strong>¡GRACIAS POR REGISTRARTE!</strong>
+                             
+                            </div>
+                            <br>
+                            <br>
+                            <br> <br><br><br><br>
+                            <hr>
+
+
+                            <br>
+
+                            <br>
+                            <br>
+
+
+
+                               <div class="text-center">
+                                   <p>hola {{nombre}}</p>
+
+
+                            <p>Bienvenido al DEMO de iEnergybook la plataforma de monitoreo y gestion de energia electrica, con herramientas y funcionas mas potentes del mercado. </p>
+<br>
+                            <p>Para acceder a la plataforma es necesario abrir el explorador de tu prefencia, ingresar a la URL que se muestra enseguida, ingresa con tu usuario y contraseña.</p>
+                            <ul> 
+                                <li>URL: app.ienergybook.com</li>
+                                <li>USUARIO: {{Email}}</li>
+                                <li>CONTRASEÑA: {{password}}</li>
+                            </ul>
+<br> <br> <br>
+
+<div>
+
+</div>
+
+<p> <img   src="cid:youtube"  height="40" width="40"> <br>  Como empezar? </p>
+
+
+<p> Te recordamos descargar la aplicacion de iEnergybook para que puedas tener una mejor experiencia con la plataforma. <br><img src="cid:app"  height="40" width="40"> <img  src="cid:playstore"  height="40" width="40">  </p>
+
+
+<p>Nos gustaria recordarte nuestro correo hola@ienergybook.com y whatsapp, como contacto para todo tipo de dudas que puedas tener <br> <img src="cid:whatsapp"  height="40" width="40"></p>
+
+
+
+
+
+<p>Para temas de soporte tecnico puedes enviarnos un correo a nuestro portal de soporte tecnico: soporte@ienergybook.com para resolver tus dudas</p>
+
+
+<p class="alignleft">Bienvenido a iEnergybook</p>
+</div>
+
+ <p class="alignright">
+                                          <img src="cid:unique2"  width="50" alt="50">
+
+
+                        <div class="text-center">
+<br>
+                            <center class="Liga"> www.ienergybook.com </center> 
+                        </div>
+                  
+
+                    </body>
+                </html>
+            </body>
+        </html>

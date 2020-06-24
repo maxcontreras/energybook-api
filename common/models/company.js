@@ -166,25 +166,16 @@ module.exports = function(Company) {
                 if(!company || company.status === Constants.Companies.status.Bloqueada){
                     cb({status: 400, message: "Error, compañía bloqueada"}, null);
                 } else {
-                    company.users.create({
-                        name: data.manager.name,
-                        lastname: data.manager.lastname,
-                        phone: data.company.phone,
-                        email: data.manager.email,
-                        password: 'Password123',
-                        created_at: new Date(),
-                        updated_at: new Date()
-                    }, function(err, user){
-                        if(err) cb(err, null)
-
-                    });
                     if(data.user){
                         company.users.create({
                             name: data.user.name,
                             lastname: data.user.lastname,
                             phone: data.company.phone,
                             email: data.user.email,
-                            password: 'Password123',
+                            password: data.user.contraseña,
+                            position: data.user.puesto,
+                            celular: data.user.celular,
+                            estado: data.user.state,
                             created_at: new Date(),
                             updated_at: new Date()
                         }, function(err, user){
@@ -215,21 +206,8 @@ module.exports = function(Company) {
                 if(!company || company.status === Constants.Companies.status.Bloqueada){
                     cb({status: 400, message: "Error, compañía bloqueada"}, null);
                 } else {
-                    company.users.create({
-                        role_id: 1,
-                        Administrando: true,
-                        name: data.manager.name,
-                        lastname: data.manager.lastname,
-                        phone: data.company.phone,
-                        email: data.manager.email,
-                        password: 'Password123',
-                        created_at: new Date(),
-                        updated_at: new Date()
-                    }, function(err, user){
-                        if(err) cb(err, null)
-
-                    });
                     if(data.user){
+                        console.log(data.user)
                         company.users.create({
                             role_id: 1,
                             Administrando: true,
@@ -237,7 +215,10 @@ module.exports = function(Company) {
                             lastname: data.user.lastname,
                             phone: data.company.phone,
                             email: data.user.email,
-                            password: 'Password123',
+                            password: data.user.contraseña,
+                            position: data.user.puesto,
+                            celular: data.user.celular,
+                            estado: data.user.state,
                             created_at: new Date(),
                             updated_at: new Date()
                         }, function(err, user){
