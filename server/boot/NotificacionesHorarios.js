@@ -154,7 +154,7 @@ notificaciones.create(
 
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
-  "45 5 * * 1-5",
+  "45 10 * * 1-5",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
 
@@ -197,7 +197,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 19 * * 1-5",
+  "45 0 * * 1-5",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios
@@ -237,7 +237,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 21 * * 1-5",
+  "45 2 * * 1-5",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
 
@@ -296,7 +296,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 23 * * 1-5",
+  "45 3 * * 1-5",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios
@@ -336,7 +336,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 6 * * 6",
+  "45 11 * * 6",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios
@@ -376,7 +376,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 23 * * 6",
+  "45 3 * * 6",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios
@@ -416,7 +416,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 19 * * 0",
+  "45 0 * * 0",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios
@@ -456,7 +456,7 @@ cron.schedule(
 
 cron.schedule(
   // 7 45 PM LUNES A VIERNES
-  "45 23 * * 0",
+  "45 2 * * 0",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     axios

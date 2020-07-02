@@ -26,7 +26,7 @@ var axios = require("axios");
 
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
-  "5 9 * * *",
+  "5 14 * * *",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
    

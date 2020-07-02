@@ -27,7 +27,7 @@ var filter = 2;
 
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
-  "10 6 * * 1",
+  "10 11 * * 1",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     designatedMeter

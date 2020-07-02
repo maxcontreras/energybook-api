@@ -25,7 +25,7 @@ moment.tz.setDefault("America/Mexico_City");
 var cron = require("node-cron");
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
-  "20 10 1 1-12 *",
+  "20 15 1 1-12 *",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
     designatedMeter

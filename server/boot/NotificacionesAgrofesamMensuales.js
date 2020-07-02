@@ -21,7 +21,7 @@ var MostrarServicio1Valor = [];
 var filter = 3; // Mensual
 
 var cron = require("node-cron");
-cron.schedule("10 10 1 1-12 *", () => {
+cron.schedule("10 15 1 1-12 *", () => {
   designatedMeter
     .findOne({
       where: {

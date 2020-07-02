@@ -24,7 +24,7 @@ var MostrarServicio2Valor = [];
 var cron = require("node-cron");
 cron.schedule(
   // 5 45 AM LUNES A VIERNES
-  "10 9 * * *",
+  "10 14 * * *",
   // Segun GuruCrontab  => At 09:00 Everyday 45 5 * * 1-5
   () => {
 
