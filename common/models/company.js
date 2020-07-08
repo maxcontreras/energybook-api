@@ -62,6 +62,7 @@ module.exports = function(Company) {
                     max_value: parseInt(data.max_value),
                     min_value: parseInt(data.min_value),
                     company_id: data.company_id,
+                    tipo: data.tipo,
                     created_at: new Date()
                 }, (err, dsgMeter) => {
                     if (err) {
