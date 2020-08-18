@@ -10,7 +10,6 @@ const Constants = require("./../../server/constants.json");
 const _l = require("lodash");
 const devicesRequests = require("../devicesRequests.js");
 
-
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const xhr = new XMLHttpRequest();
 
@@ -444,89 +443,95 @@ module.exports = function (Meter) {
           } else {
             dates.period = interval;
           }
-
-          let serviceToCall = `${meter.hostname}${API_PREFIX}records.xml?begin=${dates.begin}?end=${dates.end}`;
-          if (service !== "") {
-            const selectedService = meter
-              .services()
-              .filter((serv) => serv.serviceName === service)[0];
-            selectedService.devices.forEach((device, index) => {
-              if (index !== 0) {
-                serviceToCall += `?var=${device.name}.${variable}`;
-              }
-            });
+          if (meter.tipo == "Acuvim II") {
+            //Aqui mover algo
           } else {
-            serviceToCall += `?var=${device}.${variable}`;
-          }
-          serviceToCall += `?period=${dates.period}`;
-
-          EDS.performMeterRequest(serviceToCall, 8000)
-            .then((reading) => {
-              if (reading.recordGroup && reading.recordGroup.record) {
-                let iterable = [];
-                if (!Array.isArray(reading.recordGroup.record)) {
-                  iterable.push(reading.recordGroup.record);
-                } else {
-                  iterable = reading.recordGroup.record;
+            let serviceToCall = `${meter.hostname}${API_PREFIX}records.xml?begin=${dates.begin}?end=${dates.end}`;
+            if (service !== "") {
+              const selectedService = meter
+                .services()
+                .filter((serv) => serv.serviceName === service)[0];
+              selectedService.devices.forEach((device, index) => {
+                if (index !== 0) {
+                  serviceToCall += `?var=${device.name}.${variable}`;
                 }
-                values = iterable.map((item) => {
-                  const stdReading = {};
-                  let tmp_values = [];
-                  if (!Array.isArray(item.field)) {
-                    tmp_values.push(item.field);
+              });
+            } else {
+              serviceToCall += `?var=${device}.${variable}`;
+            }
+            serviceToCall += `?period=${dates.period}`;
+
+            EDS.performMeterRequest(serviceToCall, 8000)
+              .then((reading) => {
+                if (reading.recordGroup && reading.recordGroup.record) {
+                  let iterable = [];
+                  if (!Array.isArray(reading.recordGroup.record)) {
+                    iterable.push(reading.recordGroup.record);
                   } else {
-                    tmp_values = item.field;
+                    iterable = reading.recordGroup.record;
                   }
-                  stdReading.value = tmp_values.reduce(
-                    (accumulator, currentValue) => {
-                      return accumulator + parseFloat(currentValue.value._text);
-                    },
-                    0
-                  );
+                  values = iterable.map((item) => {
+                    const stdReading = {};
+                    let tmp_values = [];
+                    if (!Array.isArray(item.field)) {
+                      tmp_values.push(item.field);
+                    } else {
+                      tmp_values = item.field;
+                    }
+                    stdReading.value = tmp_values.reduce(
+                      (accumulator, currentValue) => {
+                        return (
+                          accumulator + parseFloat(currentValue.value._text)
+                        );
+                      },
+                      0
+                    );
 
-                  const day = item.dateTime._text.slice(0, 2);
-                  const month = item.dateTime._text.slice(2, 4);
-                  const year = item.dateTime._text.slice(4, 8);
-                  const hour = item.dateTime._text.slice(8, 10);
-                  const minute = item.dateTime._text.slice(10, 12);
-                  const second = item.dateTime._text.slice(12, 14);
-                  const tmp_date =
-                    year +
-                    "-" +
-                    month +
-                    "-" +
-                    day +
-                    "T" +
-                    hour +
-                    ":" +
-                    minute +
-                    ":" +
-                    second +
-                    "Z";
+                    const day = item.dateTime._text.slice(0, 2);
+                    const month = item.dateTime._text.slice(2, 4);
+                    const year = item.dateTime._text.slice(4, 8);
+                    const hour = item.dateTime._text.slice(8, 10);
+                    const minute = item.dateTime._text.slice(10, 12);
+                    const second = item.dateTime._text.slice(12, 14);
+                    const tmp_date =
+                      year +
+                      "-" +
+                      month +
+                      "-" +
+                      day +
+                      "T" +
+                      hour +
+                      ":" +
+                      minute +
+                      ":" +
+                      second +
+                      "Z";
 
-                  const rate_type = EDS.getCFEGDMTHRateType(tmp_date);
+                    const rate_type = EDS.getCFEGDMTHRateType(tmp_date);
 
-                  if (variable === "DP") {
-                    stdReading.value /= 1000;
-                    stdReading.isPeak = rate_type === "peak";
-                  }
+                    if (variable === "DP") {
+                      stdReading.value /= 1000;
+                      stdReading.isPeak = rate_type === "peak";
+                    }
 
-                  stdReading.value = stdReading.value.toFixed(2);
-                  stdReading.value =
-                    stdReading.value < 0 ? 0 : parseFloat(stdReading.value);
+                    stdReading.value = stdReading.value.toFixed(2);
+                    stdReading.value =
+                      stdReading.value < 0 ? 0 : parseFloat(stdReading.value);
 
-                  let utc_date = moment(tmp_date).tz(timezone);
-                  stdReading.date = EDS.parseDate(
-                    utc_date.format("YYYY-MM-DD HH:mm:ss")
-                  );
-                  return stdReading;
-                });
-              }
-              cb(null, values);
-            })
-            .catch((error) => {
-              cb(error);
-            });
+                    let utc_date = moment(tmp_date).tz(timezone);
+                    stdReading.date = EDS.parseDate(
+                      utc_date.format("YYYY-MM-DD HH:mm:ss")
+                    );
+                    return stdReading;
+                  });
+                }
+
+                cb(null, values);
+              })
+              .catch((error) => {
+                cb(error);
+              });
+          }
         }
       );
     }
@@ -555,8 +560,6 @@ module.exports = function (Meter) {
     cb
   ) {
     const DesignatedMeter = app.loopback.getModel("DesignatedMeter");
-
-    
 
     if (!id)
       cb(
@@ -591,8 +594,6 @@ module.exports = function (Meter) {
               null
             );
           if (meter) {
-
-       
             let xhr = new XMLHttpRequest();
 
             var dates =
@@ -716,7 +717,7 @@ module.exports = function (Meter) {
                               rateCosts.peak = rateCosts.peak.toFixed(2);
                             }
                             read.rateCosts = rateCosts;
-                            console.log(read)
+                            console.log(read);
                             dailyValues.push(read);
                           }
                           prevDate = date;
@@ -745,9 +746,8 @@ module.exports = function (Meter) {
                         read.cost = sum * rate;
                         read.consumption = sum;
                         read.rate = rate_type;
-                        // Aqui se empieza a comparar  
-                        if(meter.max_value < read.cost){
-                          console.log("entro")
+                        // Aqui se empieza a comparar
+                        if (meter.max_value < read.cost) {
                           bandera = true;
                         }
                         values.push(read);
@@ -775,21 +775,27 @@ module.exports = function (Meter) {
                         // If interval is daily, replace values with dailyValues
                         cb(null, dailyValues);
                       } else {
-                        const notificaciones = app.loopback.getModel("notificaciones");
+                        const notificaciones = app.loopback.getModel(
+                          "notificaciones"
+                        );
                         const User = app.loopback.getModel("eUser");
-                        if(bandera){
-                          console.log(bandera)
+                        if (bandera) {
+                          console.log(bandera);
                           User.find({
                             where: {
                               company_id: meter.company_id,
                             },
                           }).then((users) => {
-                            var  Fecha = Date.now();
+                            var Fecha = Date.now();
                             notificaciones.create(
                               [
                                 {
-                                  Dispositivos: ["!Cuidado! Algunas variables están por encima de lo permitido por el Código de Red "],
-                                  Servicios: ["Algunas variables están por encima de lo permitido por el Código de Red."],
+                                  Dispositivos: [
+                                    "!Cuidado! Algunas variables están por encima de lo permitido por el Código de Red ",
+                                  ],
+                                  Servicios: [
+                                    "Algunas variables están por encima de lo permitido por el Código de Red.",
+                                  ],
                                   company_id: meter.company_id,
                                   tipo: "Código de Red",
                                   intervalo: "Error",
@@ -801,27 +807,17 @@ module.exports = function (Meter) {
                                 },
                               ],
                               function () {
-
-
-
-
-
-                                console.log("Creando notificacion Error de codigo de red ");
-
-
-
-                                
+                                console.log(
+                                  "Creando notificacion Error de codigo de red "
+                                );
                               }
                             ); //Creando notificacion
                           });
-        
-                          
                         }
                         cb(null, values);
                       }
                     }
                   );
-           
                 } else {
                   return cb(null, values);
                 }

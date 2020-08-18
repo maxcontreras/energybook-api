@@ -91,5 +91,9 @@
   "eficiencia": {
     "dataSource": "mongodb",
     "public": true
+  },
+  "Minutes": {
+    "dataSource": "mongodb",
+    "public": true
   }
 }
