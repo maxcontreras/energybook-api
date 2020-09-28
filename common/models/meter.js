@@ -611,14 +611,17 @@ module.exports = function (Meter) {
               "?end=" +
               dates.end;
             if (service !== "") {
-              const selectedService = meter
-                .services()
-                .filter((serv) => serv.serviceName === service)[0];
-              selectedService.devices.forEach((device, index) => {
-                if (index !== 0) {
-                  serviceToCall += "?var=" + device.name + ".EPimp";
-                }
-              });
+              if (meter.tipo == "Acuvim II") {
+              } else {
+                const selectedService = meter
+                  .services()
+                  .filter((serv) => serv.serviceName === service)[0];
+                selectedService.devices.forEach((device, index) => {
+                  if (index !== 0) {
+                    serviceToCall += "?var=" + device.name + ".EPimp";
+                  }
+                });
+              }
             } else {
               serviceToCall += "?var=" + device + ".EPimp";
             }
@@ -1303,14 +1306,17 @@ module.exports = function (Meter) {
               "?end=" +
               dates.end;
             if (service !== "") {
-              const selectedService = meter
-                .services()
-                .filter((serv) => serv.serviceName === service)[0];
-              selectedService.devices.forEach((device, index) => {
-                if (index !== 0) {
-                  serviceToCall += "?var=" + device.name + ".EPimp";
-                }
-              });
+              if (meter.tipo == "Acuvim II") {
+              } else {
+                const selectedService = meter
+                  .services()
+                  .filter((serv) => serv.serviceName === service)[0];
+                selectedService.devices.forEach((device, index) => {
+                  if (index !== 0) {
+                    serviceToCall += "?var=" + device.name + ".EPimp";
+                  }
+                });
+              }
             } else {
               serviceToCall += "?var=" + device + ".EPimp";
             }

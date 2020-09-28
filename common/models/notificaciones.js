@@ -1,7 +1,6 @@
 const axios = require("axios");
-const nodemailer = require('nodemailer');
-const hbs = require('nodemailer-express-handlebars');
-
+const nodemailer = require("nodemailer");
+const hbs = require("nodemailer-express-handlebars");
 
 module.exports = function (notificaciones) {
   /**
@@ -140,108 +139,99 @@ module.exports = function (notificaciones) {
     });
   };
 
-
-  notificaciones.SendRegistro = function SendRegistro(Email, password, nombre, cb) {
-
-
-
+  notificaciones.SendRegistro = function SendRegistro(
+    Email,
+    password,
+    nombre,
+    cb
+  ) {
     let transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
-          user: 'pruebacorreoleftright@gmail.com',
-          pass: '31255382'
-      }
-    });
-    
-    transporter.use('compile', hbs({
-      viewEngine: {
-          extName: '.hbs',
-          partialsDir: 'server/templates/templatecorreo/',
-          layoutsDir: 'server/templates/templatecorreo/',
-          defaultLayout: 'ok.hbs'
+        user: "pruebacorreoleftright@gmail.com",
+        pass: "31255382",
       },
-      viewPath: './server/templates/templatecorreo/',
-      extName: '.hbs'
-    }));
+    });
 
-
+    transporter.use(
+      "compile",
+      hbs({
+        viewEngine: {
+          extName: ".hbs",
+          partialsDir: "server/templates/templatecorreo/",
+          layoutsDir: "server/templates/templatecorreo/",
+          defaultLayout: "ok.hbs",
+        },
+        viewPath: "./server/templates/templatecorreo/",
+        extName: ".hbs",
+      })
+    );
 
     nombre_company = "hola";
     nombre = nombre;
 
     let mailOptions = {
-      from: 'pruebacorreoleftright@gmail.com',
+      from: "pruebacorreoleftright@gmail.com",
       to: Email,
-      subject: 'CorreoSemanalIEnergybook',
+      subject: "CorreoSemanalIEnergybook",
       context: {
         nombre,
         password,
         Email,
-          nombre_company
+        nombre_company,
       },
       attachments: [
         {
-          filename: 'app.png',
-              path: './server/templates/templatecorreo/svg/app.png',
-              cid: 'app' //same cid value as in the html 
+          filename: "app.png",
+          path: "./server/templates/templatecorreo/svg/app.png",
+          cid: "app", //same cid value as in the html
         },
         {
-          filename: 'playstore.png',
-              path: './server/templates/templatecorreo/svg/playstore.png',
-              cid: 'playstore' //same cid value as in the html 
+          filename: "playstore.png",
+          path: "./server/templates/templatecorreo/svg/playstore.png",
+          cid: "playstore", //same cid value as in the html
         },
 
         {
-          filename: 'whatsapp.png',
-              path: './server/templates/templatecorreo/svg/whatsapp.png',
-              cid: 'whatsapp' //same cid value as in the html 
+          filename: "whatsapp.png",
+          path: "./server/templates/templatecorreo/svg/whatsapp.png",
+          cid: "whatsapp", //same cid value as in the html
         },
         {
-          filename: 'youtube.png',
-              path: './server/templates/templatecorreo/svg/youtube.png',
-              cid: 'youtube' //same cid value as in the html 
+          filename: "youtube.png",
+          path: "./server/templates/templatecorreo/svg/youtube.png",
+          cid: "youtube", //same cid value as in the html
         },
-          {
-              filename: 'ienergybook1x1.PNG',
-              path: './server/templates/templatecorreo/svg/ienergybook1x1.PNG',
-              cid: 'unique2' //same cid value as in the html
-          }, {
-              filename: 'Logotipo-energyBook.PNG',
-              path: './server/templates/templatecorreo/svg/Logotipo-energyBook.PNG',
-              cid: 'unique' //same cid value as in the html
-          }
+        {
+          filename: "ienergybook1x1.PNG",
+          path: "./server/templates/templatecorreo/svg/ienergybook1x1.PNG",
+          cid: "unique2", //same cid value as in the html
+        },
+        {
+          filename: "Logotipo-energyBook.PNG",
+          path: "./server/templates/templatecorreo/svg/Logotipo-energyBook.PNG",
+          cid: "unique", //same cid value as in the html
+        },
       ],
-      template: 'ok'
-  }
+      template: "ok",
+    };
 
-  transporter.sendMail(mailOptions, (err, inf) => {
+    transporter.sendMail(mailOptions, (err, inf) => {
       if (err) {
-         console.log(err)
+        console.log(err);
       } else {
-       console.log('se mando correo')
-       cb(null,"Correcto")
+        console.log("se mando correo");
+        cb(null, "Correcto");
       }
-  })
+    });
+  };
 
-
-
-  }
-
-     notificaciones.remoteMethod(
-    'SendRegistro', {
-        accepts: [
-            { arg: 'Email', type: 'string',  required: false, default: ''},
-            { arg: 'password', type: 'string',  required: false, default: ''},
-            { arg: 'nombre', type: 'string',  required: false, default: ''}
-
-        ],
-        returns: { arg: 'response', type: 'string' }
-    }
-);
-
-
-
-
-
-
+  notificaciones.remoteMethod("SendRegistro", {
+    accepts: [
+      { arg: "Email", type: "string", required: false, default: "" },
+      { arg: "password", type: "string", required: false, default: "" },
+      { arg: "nombre", type: "string", required: false, default: "" },
+    ],
+    returns: { arg: "response", type: "string" },
+  });
 };

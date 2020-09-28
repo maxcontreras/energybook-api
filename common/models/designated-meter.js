@@ -1478,6 +1478,7 @@ module.exports = function (Designatedmeter) {
             })
             .on("end", function () {
               var DesignatedMeterid = name.split("-")[1];
+              console.log(DesignatedMeterid);
               // al final del archivo manda a llamar estos
               const ver = require("./../../server/server.js");
               const Minutes = ver.loopback.getModel("Minutes");

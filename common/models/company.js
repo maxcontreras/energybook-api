@@ -5,6 +5,7 @@ const async = require("async");
 const Constants = require("./../../server/constants.json");
 const mail = require("../../server/modules/mail.js");
 const path = require("path");
+const meter = require("./meter.js");
 const notificaciones = app.loopback.notificaciones;
 
 module.exports = function (Company) {
@@ -69,19 +70,44 @@ module.exports = function (Company) {
         (err, newMeter) => {
           if (err) return { status: 400, message: "Error al crear medidor" };
           if (data.tipo == "Acuvim II") {
-            newMeter.designatedMeters
-              .create({
-                device_name: data.device_name,
-                hostname: data.hostname,
-                summatory_device:
-                  Constants.Meters.common_names.summatory_device,
-                max_value: parseInt(data.max_value),
-                min_value: parseInt(data.min_value),
+            DesignatedMeters.find({
+              where: {
                 company_id: data.company_id,
-                tipo: data.tipo,
-                created_at: new Date(),
-              })
-              .then((res) => {});
+              },
+            }).then((ok) => {
+              if (ok[0]) {
+                ok[0].devices.push({
+                  name: data.device_name,
+                  description: data.hostname,
+                  id: Math.random() * 10.232 + "h",
+                });
+
+                ok[0].save();
+              } else {
+                // se crea un nuevo medidor
+
+                newMeter.designatedMeters
+                  .create({
+                    device_name: data.device_name,
+                    hostname: data.hostname,
+                    summatory_device:
+                      Constants.Meters.common_names.summatory_device,
+                    max_value: parseInt(data.max_value),
+                    min_value: parseInt(data.min_value),
+                    company_id: data.company_id,
+                    tipo: data.tipo,
+                    created_at: new Date(),
+                    devices: [
+                      {
+                        name: data.device_name,
+                        description: data.hostname,
+                        id: Math.random() * 10.232 + "h",
+                      },
+                    ],
+                  })
+                  .then((res) => {});
+              }
+            });
             cb(null, "Medidor " + " asignado correctamente");
           } else {
             newMeter.designatedMeters.create(
